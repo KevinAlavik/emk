@@ -6,7 +6,7 @@
 #include <util/log.h>
 #include <util/align.h>
 
-uint64_t *kernel_pagemap = 0;
+uint64_t *kernel_pagemap = NULL;
 extern char __limine_requests_start[];
 extern char __limine_requests_end[];
 extern char __text_start[];
@@ -16,72 +16,111 @@ extern char __rodata_end[];
 extern char __data_start[];
 extern char __data_end[];
 
-#define PRINT_SECTION(name, start, end) log_early("section=%s, start=0x%.16llx, end=0x%.16llx, size=%d", name, start, end, end - start)
+#define PRINT_SECTION(name, start, end) log_early("section=%s, start=0x%.16llx, end=0x%.16llx, size=%lld", name, (uint64_t)start, (uint64_t)end, (uint64_t)(end - start))
 
-/* Helpers */
+/* Helper: Calculate page table index for a virtual address */
 static inline uint64_t page_index(uint64_t virt, uint64_t shift)
 {
-    return (virt & (uint64_t)0x1ff << shift) >> shift;
+    return (virt >> shift) & PAGE_INDEX_MASK;
 }
 
+/* Helper: Get page table entry, return NULL if not present */
 static inline uint64_t *get_table(uint64_t *table, uint64_t index)
 {
+    if (!table || !(table[index] & VMM_PRESENT))
+    {
+        return NULL;
+    }
     return (uint64_t *)HIGHER_HALF(table[index] & PAGE_MASK);
 }
 
+/* Helper: Get or allocate a page table */
 static inline uint64_t *get_or_alloc_table(uint64_t *table, uint64_t index, uint64_t flags)
 {
+    if (!table)
+    {
+        return NULL;
+    }
     if (!(table[index] & VMM_PRESENT))
     {
-        uint64_t *pml = palloc(1, true);
-        memset(pml, 0, PAGE_SIZE);
-        table[index] = (uint64_t)PHYSICAL(pml) | 0b111;
+        uint64_t *new_table = palloc(1, true);
+        if (!new_table || ((uint64_t)new_table & (PAGE_SIZE - 1)))
+        {
+            return NULL;
+        }
+        memset(new_table, 0, PAGE_SIZE);
+        table[index] = (uint64_t)PHYSICAL(new_table) | VMM_PRESENT | VMM_WRITE | (flags & VMM_USER);
     }
-    table[index] |= flags & 0xFF;
     return (uint64_t *)HIGHER_HALF(table[index] & PAGE_MASK);
 }
 
+/* Translate virtual to physical address */
 uint64_t virt_to_phys(uint64_t *pagemap, uint64_t virt)
 {
+    if (!pagemap)
+    {
+        return 0;
+    }
 
     uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
-    if (!(pagemap[pml4_idx] & VMM_PRESENT))
-        return 0;
-
     uint64_t *pml3 = get_table(pagemap, pml4_idx);
+    if (!pml3)
+    {
+        return 0;
+    }
+
     uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
-    if (!(pml3[pml3_idx] & VMM_PRESENT))
-        return 0;
-
     uint64_t *pml2 = get_table(pml3, pml3_idx);
-    uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
-    if (!(pml2[pml2_idx] & VMM_PRESENT))
+    if (!pml2)
+    {
         return 0;
+    }
 
+    uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
     uint64_t *pml1 = get_table(pml2, pml2_idx);
+    if (!pml1)
+    {
+        return 0;
+    }
+
     uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
     if (!(pml1[pml1_idx] & VMM_PRESENT))
+    {
         return 0;
+    }
 
     return pml1[pml1_idx] & PAGE_MASK;
 }
 
-/* Pagemap set/get */
+/* Set active pagemap (load CR3) */
 void pmset(uint64_t *pagemap)
 {
-    __asm__ volatile("movq %0, %%cr3" ::"r"(PHYSICAL((uint64_t)pagemap)));
+    if (!pagemap || ((uint64_t)PHYSICAL(pagemap) & (PAGE_SIZE - 1)))
+    {
+        kpanic(NULL, "Invalid pagemap");
+    }
+    if (!virt_to_phys(pagemap, (uint64_t)pagemap))
+    {
+        kpanic(NULL, "Pagemap not self-mapped");
+    }
+    __asm__ volatile("movq %0, %%cr3" ::"r"((uint64_t)PHYSICAL(pagemap)) : "memory");
 }
 
-uint64_t *pmget()
+/* Get current pagemap from CR3 */
+uint64_t *pmget(void)
 {
-    uint64_t p;
-    __asm__ volatile("movq %%cr3, %0" : "=r"(p));
-    return (uint64_t *)p;
+    uint64_t cr3;
+    __asm__ volatile("movq %%cr3, %0" : "=r"(cr3));
+    return (uint64_t *)HIGHER_HALF(cr3);
 }
 
-/* Mapping and unmapping */
-void vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
+/* Map virtual to physical address */
+int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
 {
+    if (!pagemap || (virt & (PAGE_SIZE - 1)) || (phys & (PAGE_SIZE - 1)))
+    {
+        return -1;
+    }
 
     uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
     uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
@@ -89,96 +128,127 @@ void vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
     uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
 
     uint64_t *pml3 = get_or_alloc_table(pagemap, pml4_idx, flags);
-    uint64_t *pml2 = get_or_alloc_table(pml3, pml3_idx, flags);
-    uint64_t *pml1 = get_or_alloc_table(pml2, pml2_idx, flags);
+    if (!pml3)
+    {
+        return -1;
+    }
 
-    pml1[pml1_idx] = phys | flags;
+    uint64_t *pml2 = get_or_alloc_table(pml3, pml3_idx, flags);
+    if (!pml2)
+    {
+        return -1;
+    }
+
+    uint64_t *pml1 = get_or_alloc_table(pml2, pml2_idx, flags);
+    if (!pml1)
+    {
+        return -1;
+    }
+
+    pml1[pml1_idx] = phys | (flags & (VMM_PRESENT | VMM_WRITE | VMM_USER | VMM_NX));
+    __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
+    return 0;
 }
 
-void vunmap(uint64_t *pagemap, uint64_t virt)
+/* Unmap virtual address */
+int vunmap(uint64_t *pagemap, uint64_t virt)
 {
+    if (!pagemap || (virt & (PAGE_SIZE - 1)))
+    {
+        return -1;
+    }
+
     uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
-    if (!(pagemap[pml4_idx] & VMM_PRESENT))
-        return;
-
     uint64_t *pml3 = get_table(pagemap, pml4_idx);
+    if (!pml3)
+    {
+        return 0;
+    }
+
     uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
-    if (!(pml3[pml3_idx] & VMM_PRESENT))
-        return;
-
     uint64_t *pml2 = get_table(pml3, pml3_idx);
+    if (!pml2)
+    {
+        return 0;
+    }
+
     uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
-    if (!(pml2[pml2_idx] & VMM_PRESENT))
-        return;
-
     uint64_t *pml1 = get_table(pml2, pml2_idx);
-    uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
+    if (!pml1)
+    {
+        return 0;
+    }
 
+    uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
     pml1[pml1_idx] = 0;
     __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
+    return 0;
 }
 
-void paging_init()
+/* Initialize kernel paging */
+void paging_init(void)
 {
-    kernel_pagemap = (uint64_t *)palloc(1, true);
-    if (kernel_pagemap == NULL)
+    kernel_pagemap = palloc(1, true);
+    if (!kernel_pagemap || ((uint64_t)kernel_pagemap & (PAGE_SIZE - 1)))
     {
-        kpanic(NULL, "Failed to allocate page for kernel pagemap, halting");
+        kpanic(NULL, "Failed to allocate kernel pagemap");
     }
     memset(kernel_pagemap, 0, PAGE_SIZE);
 
-    PRINT_SECTION("text", __text_start, __text_end);
-    PRINT_SECTION("rodata", __rodata_start, __rodata_end);
-    PRINT_SECTION("data", __data_start, __data_end);
-
-    kstack_top = ALIGN_UP(kstack_top, PAGE_SIZE);
-    for (uint64_t stack = kstack_top - (16 * 1024); stack < kstack_top; stack += PAGE_SIZE)
+    /* Self-map pagemap */
+    uint64_t pagemap_phys = (uint64_t)PHYSICAL(kernel_pagemap);
+    if (vmap(kernel_pagemap, (uint64_t)kernel_pagemap, pagemap_phys, VMM_PRESENT | VMM_WRITE | VMM_NX))
     {
-        vmap(kernel_pagemap, stack, (uint64_t)PHYSICAL(stack), VMM_PRESENT | VMM_WRITE | VMM_NX);
+        kpanic(NULL, "Failed to self-map pagemap");
     }
-    log_early("Mapped kernel stack");
 
-    for (uint64_t reqs = ALIGN_DOWN(__limine_requests_start, PAGE_SIZE); reqs < ALIGN_UP(__limine_requests_end, PAGE_SIZE); reqs += PAGE_SIZE)
+    /* Map kernel sections */
+    uint64_t text_start = ALIGN_DOWN((uint64_t)__text_start, PAGE_SIZE);
+    uint64_t text_end = ALIGN_UP((uint64_t)__text_end, PAGE_SIZE);
+    for (uint64_t addr = text_start; addr < text_end; addr += PAGE_SIZE)
     {
-        vmap(kernel_pagemap, reqs, reqs - kvirt + kphys, VMM_PRESENT | VMM_WRITE);
+        uint64_t phys = addr - kvirt + kphys;
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_NX);
     }
-    log_early("Mapped Limine Requests region.");
 
-    for (uint64_t text = ALIGN_DOWN(__text_start, PAGE_SIZE); text < ALIGN_UP(__text_end, PAGE_SIZE); text += PAGE_SIZE)
+    uint64_t rodata_start = ALIGN_DOWN((uint64_t)__rodata_start, PAGE_SIZE);
+    uint64_t rodata_end = ALIGN_UP((uint64_t)__rodata_end, PAGE_SIZE);
+    for (uint64_t addr = rodata_start; addr < rodata_end; addr += PAGE_SIZE)
     {
-        vmap(kernel_pagemap, text, text - kvirt + kphys, VMM_PRESENT);
+        uint64_t phys = addr - kvirt + kphys;
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_NX);
     }
-    log_early("Mapped .text");
 
-    for (uint64_t rodata = ALIGN_DOWN(__rodata_start, PAGE_SIZE); rodata < ALIGN_UP(__rodata_end, PAGE_SIZE); rodata += PAGE_SIZE)
+    uint64_t data_start = ALIGN_DOWN((uint64_t)__data_start, PAGE_SIZE);
+    uint64_t data_end = ALIGN_UP((uint64_t)__data_end, PAGE_SIZE);
+    for (uint64_t addr = data_start; addr < data_end; addr += PAGE_SIZE)
     {
-        vmap(kernel_pagemap, rodata, rodata - kvirt + kphys, VMM_PRESENT | VMM_NX);
+        uint64_t phys = addr - kvirt + kphys;
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
     }
-    log_early("Mapped .rodata");
 
-    for (uint64_t data = ALIGN_DOWN(__data_start, PAGE_SIZE); data < ALIGN_UP(__data_end, PAGE_SIZE); data += PAGE_SIZE)
+    /* Map kernel stack */
+    uint64_t stack_top = ALIGN_UP(kstack_top, PAGE_SIZE);
+    for (uint64_t addr = stack_top - (16 * 1024); addr < stack_top; addr += PAGE_SIZE)
     {
-        vmap(kernel_pagemap, data, data - kvirt + kphys, VMM_PRESENT | VMM_WRITE | VMM_NX);
+        uint64_t phys = (uint64_t)PHYSICAL(addr);
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
     }
-    log_early("Mapped .data");
 
+    /* Map physical memory  */
     for (uint64_t i = 0; i < memmap->entry_count; i++)
     {
-        struct limine_memmap_entry *entry = memmap->entries[i];
-        uint64_t base = ALIGN_DOWN(entry->base, PAGE_SIZE);
-        uint64_t end = ALIGN_UP(entry->base + entry->length, PAGE_SIZE);
-
+        if (!memmap->entries[i]->base || !memmap->entries[i]->length)
+        {
+            continue;
+        }
+        uint64_t base = ALIGN_DOWN(memmap->entries[i]->base, PAGE_SIZE);
+        uint64_t end = ALIGN_UP(memmap->entries[i]->base + memmap->entries[i]->length, PAGE_SIZE);
         for (uint64_t addr = base; addr < end; addr += PAGE_SIZE)
         {
             vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(addr), addr, VMM_PRESENT | VMM_WRITE | VMM_NX);
         }
-        log_early("Mapped memory map entry %d: base=0x%.16llx, length=0x%.16llx, type=%d", i, entry->base, entry->length, entry->type);
     }
 
-    for (uint64_t gb4 = 0; gb4 < 0x100000000; gb4 += PAGE_SIZE)
-    {
-        vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(gb4), gb4, VMM_PRESENT | VMM_WRITE);
-    }
-    log_early("Mapped HHDM");
     pmset(kernel_pagemap);
 }

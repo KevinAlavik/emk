@@ -44,7 +44,7 @@ void emk_entry(void)
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
-        log_early("ERROR: Limine base revision is not supported\n");
+        kpanic(NULL, "Limine base revision is not supported\n");
         hcf();
     }
 
@@ -79,6 +79,7 @@ void emk_entry(void)
     pfree(a, 1);
 
     paging_init();
+    log_early("Initialized paging");
 
     hlt();
 }

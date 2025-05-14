@@ -1,12 +1,13 @@
 #ifndef PAGING_H
 #define PAGING_H
 
+#include <stdint.h>
 #include <boot/emk.h>
 
-#define VMM_PRESENT BIT(0)
-#define VMM_WRITE BIT(1)
-#define VMM_USER BIT(2)
-#define VMM_NX BIT(63)
+#define VMM_PRESENT (1ULL << 0)
+#define VMM_WRITE (1ULL << 1)
+#define VMM_USER (1ULL << 2)
+#define VMM_NX (1ULL << 63)
 
 #define PAGE_MASK 0x000FFFFFFFFFF000ULL
 #define PAGE_INDEX_MASK 0x1FF
@@ -17,12 +18,13 @@
 #define PML4_SHIFT 39
 
 extern uint64_t *kernel_pagemap;
+extern uint64_t kstack_top;
 
 void pmset(uint64_t *pagemap);
-uint64_t *pmget();
-void vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags);
-void vunmap(uint64_t *pagemap, uint64_t virt);
+uint64_t *pmget(void);
+int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags);
+int vunmap(uint64_t *pagemap, uint64_t virt);
 uint64_t virt_to_phys(uint64_t *pagemap, uint64_t virt);
-void paging_init();
+void paging_init(void);
 
 #endif // PAGING_H
