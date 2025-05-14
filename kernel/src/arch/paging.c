@@ -44,13 +44,14 @@ static inline uint64_t *get_or_alloc_table(uint64_t *table, uint64_t index, uint
     if (!(table[index] & VMM_PRESENT))
     {
         uint64_t *new_table = palloc(1, true);
-        if (!new_table || ((uint64_t)new_table & (PAGE_SIZE - 1)))
+        if (!new_table || IS_PAGE_ALIGNED((uint64_t)new_table))
         {
             return NULL;
         }
         memset(new_table, 0, PAGE_SIZE);
-        table[index] = (uint64_t)PHYSICAL(new_table) | VMM_PRESENT | VMM_WRITE | (flags & VMM_USER);
+        table[index] = (uint64_t)PHYSICAL(new_table) | 0b111;
     }
+    table[index] |= flags & 0xFF;
     return (uint64_t *)HIGHER_HALF(table[index] & PAGE_MASK);
 }
 
@@ -95,13 +96,9 @@ uint64_t virt_to_phys(uint64_t *pagemap, uint64_t virt)
 /* Set active pagemap (load CR3) */
 void pmset(uint64_t *pagemap)
 {
-    if (!pagemap || ((uint64_t)PHYSICAL(pagemap) & (PAGE_SIZE - 1)))
+    if (!pagemap || !IS_PAGE_ALIGNED((uint64_t)PHYSICAL(pagemap)))
     {
         kpanic(NULL, "Invalid pagemap");
-    }
-    if (!virt_to_phys(pagemap, (uint64_t)pagemap))
-    {
-        kpanic(NULL, "Pagemap not self-mapped");
     }
     __asm__ volatile("movq %0, %%cr3" ::"r"((uint64_t)PHYSICAL(pagemap)) : "memory");
 }
@@ -194,13 +191,6 @@ void paging_init(void)
         kpanic(NULL, "Failed to allocate kernel pagemap");
     }
     memset(kernel_pagemap, 0, PAGE_SIZE);
-
-    /* Self-map pagemap */
-    uint64_t pagemap_phys = (uint64_t)PHYSICAL(kernel_pagemap);
-    if (vmap(kernel_pagemap, (uint64_t)kernel_pagemap, pagemap_phys, VMM_PRESENT | VMM_WRITE | VMM_NX))
-    {
-        kpanic(NULL, "Failed to self-map pagemap");
-    }
 
     /* Map kernel sections */
     uint64_t text_start = ALIGN_DOWN((uint64_t)__text_start, PAGE_SIZE);
