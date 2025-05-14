@@ -6,9 +6,12 @@
 
 extern uint64_t hhdm_offset;
 extern struct limine_memmap_response *memmap;
+extern uint64_t kvirt;
+extern uint64_t kphys;
+extern uint64_t kstack_top;
 
-#define HIGHER_HALF(ptr) ((void *)((uint64_t)ptr) + hhdm_offset)
-#define PHYSICAL(ptr) ((void *)((uint64_t)ptr) - hhdm_offset)
+#define HIGHER_HALF(ptr) ((void *)((uint64_t)(ptr) < hhdm_offset ? (uint64_t)(ptr) + hhdm_offset : (uint64_t)(ptr)))
+#define PHYSICAL(ptr) ((void *)((uint64_t)(ptr) >= hhdm_offset ? (uint64_t)(ptr) - hhdm_offset : (uint64_t)(ptr)))
 
 #define BIT(x) (1ULL << (x))
 

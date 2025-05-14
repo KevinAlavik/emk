@@ -7,7 +7,7 @@
 #define PAGE_SIZE 0x1000
 
 void pmm_init();
-void *pmm_request_pages(size_t pages, bool higher_half);
-void pmm_release_pages(void *ptr, size_t pages);
+void *palloc(size_t pages, bool higher_half);
+void pfree(void *ptr, size_t pages);
 
 #endif // PMM_H

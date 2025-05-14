@@ -4,6 +4,7 @@
         "stdarg.h": "c",
         "idt.h": "c",
         "limine.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "stdint.h": "c"
     }
 }

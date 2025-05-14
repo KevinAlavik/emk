@@ -82,7 +82,7 @@ void pmm_init(void)
     }
 }
 
-void *pmm_request_pages(size_t pages, bool higher_half)
+void *palloc(size_t pages, bool higher_half)
 {
     if (pages == 0 || pages > free_pages)
         return NULL;
@@ -137,7 +137,7 @@ void *pmm_request_pages(size_t pages, bool higher_half)
     return NULL;
 }
 
-void pmm_release_pages(void *ptr, size_t pages)
+void pfree(void *ptr, size_t pages)
 {
     if (!ptr || !is_aligned(ptr, MIN_ALIGN))
         return;
