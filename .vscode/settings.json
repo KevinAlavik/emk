@@ -2,6 +2,8 @@
     "files.associations": {
         "cstdio": "c",
         "stdarg.h": "c",
-        "idt.h": "c"
+        "idt.h": "c",
+        "limine.h": "c",
+        "stddef.h": "c"
     }
 }

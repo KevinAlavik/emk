@@ -1,5 +1,6 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <boot/limine.h>
+#include <boot/emk.h>
 #include <arch/cpu.h>
 #include <arch/io.h>
 #include <dev/serial.h>
@@ -7,10 +8,21 @@
 #include <util/log.h>
 #include <arch/gdt.h>
 #include <arch/idt.h>
+#include <sys/kpanic.h>
+#include <mm/pmm.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
+    .id = LIMINE_MEMMAP_REQUEST,
+    .revision = 0};
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST,
+    .revision = 0};
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
+
+uint64_t hhdm_offset = 0;
+struct limine_memmap_response *memmap = NULL;
 
 void emk_entry(void)
 {
@@ -32,6 +44,31 @@ void emk_entry(void)
     log_early("Initialized GDT");
     idt_init();
     log_early("Initialized IDT");
+
+    if (!hhdm_request.response)
+    {
+        kpanic(NULL, "Failed to get HHDM request");
+    }
+
+    if (!memmap_request.response)
+    {
+        kpanic(NULL, "Failed to get memmap request");
+    }
+
+    memmap = memmap_request.response;
+    hhdm_offset = hhdm_request.response->offset;
+    log_early("HHDM Offset: %llx", hhdm_offset);
+    pmm_init();
+    log_early("Initialized PMM");
+
+    /* Test allocate a single physical page */
+    char *a = pmm_request_pages(1, true);
+    if (!a)
+        kpanic(NULL, "Failed to allocate single physical page");
+
+    *a = 32;
+    log_early("Allocated 1 physical page: %llx", (uint64_t)a);
+    pmm_release_pages(a, 1);
 
     hlt();
 }
