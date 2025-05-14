@@ -1,10 +1,7 @@
 {
     "files.associations": {
-        "stdnoreturn.h": "c",
-        "serial.h": "c",
-        "io.h": "c",
-        "kprintf.h": "c",
-        "log.h": "c",
-        "cpu.h": "c"
+        "cstdio": "c",
+        "stdarg.h": "c",
+        "idt.h": "c"
     }
 }

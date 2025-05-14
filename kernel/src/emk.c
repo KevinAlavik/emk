@@ -6,6 +6,7 @@
 #include <util/kprintf.h>
 #include <util/log.h>
 #include <arch/gdt.h>
+#include <arch/idt.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
@@ -21,11 +22,15 @@ void emk_entry(void)
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
-        early("ERROR: Limine base revision is not supported\n");
+        log_early("ERROR: Limine base revision is not supported\n");
         hcf();
     }
 
     gdt_init();
-    early("Initialized GDT");
+    log_early("Initialized GDT");
+    idt_init();
+    log_early("Initialized IDT");
+    __asm__ volatile("int $0x01");
+
     hlt();
 }

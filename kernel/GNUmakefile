@@ -12,15 +12,30 @@ CC := gcc
 AS := gcc
 NASM := nasm
 
-CFLAGS := -g -O2 -pipe -Wall -Wextra -Werror -std=gnu11 -ffreestanding \
-          -fno-stack-protector -fno-stack-check -fno-PIC \
-          -ffunction-sections -fdata-sections -m64 -march=x86-64 \
-          -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone \
-          -mcmodel=kernel -Wno-unused-variable
+# Build mode configuration
+BUILD_MODE ?= dev
+ifeq ($(BUILD_MODE),release)
+    CFLAGS := -Os -pipe -Wall -Wextra -Werror -std=gnu11 -ffreestanding \
+              -fno-stack-protector -fno-stack-check -fno-PIC \
+              -ffunction-sections -fdata-sections -m64 -march=x86-64 \
+              -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone \
+              -mcmodel=kernel -fno-unwind-tables -fno-asynchronous-unwind-tables \
+              -s -Wno-unused-variable
+    NASMFLAGS :=
+    LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections \
+               -T linker.ld -Wl,-m,elf_x86_64 -Wl,--strip-all
+else
+    CFLAGS := -g -O2 -pipe -Wall -Wextra -Werror -std=gnu11 -ffreestanding \
+              -fno-stack-protector -fno-stack-check -fno-PIC \
+              -ffunction-sections -fdata-sections -m64 -march=x86-64 \
+              -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone \
+              -mcmodel=kernel -Wno-unused-variable
+    NASMFLAGS := -F dwarf -g
+    LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections \
+               -T linker.ld -Wl,-m,elf_x86_64
+endif
+
 CPPFLAGS := -I../external -I$(SRCDIR) -MMD -MP -DLIMINE_API_REVISION=3
-NASMFLAGS := -F dwarf -g
-LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections \
-           -T linker.ld -Wl,-m,elf_x86_64
 
 SRCS := $(shell find $(SRCDIR) -type f \( -name '*.c' -o -name '*.S' -o -name '*.asm' \))
 OBJS := $(patsubst %.c,$(OBJDIR)/%.o,$(filter %.c,$(SRCS))) \

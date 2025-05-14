@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <arch/gdt.h>
 
 gdt_entry_t gdt[5];
