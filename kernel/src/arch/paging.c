@@ -142,7 +142,7 @@ int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
         return -1;
     }
 
-    pml1[pml1_idx] = phys | (flags & (VMM_PRESENT | VMM_WRITE | VMM_USER | VMM_NX));
+    pml1[pml1_idx] = phys | flags;
     __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
     return 0;
 }
