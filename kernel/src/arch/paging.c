@@ -192,6 +192,23 @@ void paging_init(void)
     }
     memset(kernel_pagemap, 0, PAGE_SIZE);
 
+    /* Map kernel stack */
+    uint64_t stack_top = ALIGN_UP(kstack_top, PAGE_SIZE);
+    for (uint64_t addr = stack_top - (16 * 1024); addr < stack_top; addr += PAGE_SIZE)
+    {
+        uint64_t phys = (uint64_t)PHYSICAL(addr);
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    }
+
+    /* Map bootloader requests */
+    uint64_t breq_start = ALIGN_DOWN(__limine_requests_start, PAGE_SIZE);
+    uint64_t breq_end = ALIGN_UP(__limine_requests_end, PAGE_SIZE);
+    PRINT_SECTION("limine", breq_start, breq_end);
+    for (uint64_t reqs = breq_start; reqs < breq_end; reqs += PAGE_SIZE)
+    {
+        vmap(kernel_pagemap, reqs, reqs - kvirt + kphys, VMM_PRESENT | VMM_WRITE);
+    }
+
     /* Map kernel sections */
     uint64_t text_start = ALIGN_DOWN((uint64_t)__text_start, PAGE_SIZE);
     uint64_t text_end = ALIGN_UP((uint64_t)__text_end, PAGE_SIZE);
@@ -217,14 +234,6 @@ void paging_init(void)
     for (uint64_t addr = data_start; addr < data_end; addr += PAGE_SIZE)
     {
         uint64_t phys = addr - kvirt + kphys;
-        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
-    }
-
-    /* Map kernel stack */
-    uint64_t stack_top = ALIGN_UP(kstack_top, PAGE_SIZE);
-    for (uint64_t addr = stack_top - (16 * 1024); addr < stack_top; addr += PAGE_SIZE)
-    {
-        uint64_t phys = (uint64_t)PHYSICAL(addr);
         vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
     }
 
