@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <boot/limine.h>
 #include <arch/cpu.h>
 #include <arch/io.h>

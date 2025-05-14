@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <lib/string.h>
 
 void *memcpy(void *restrict dest, const void *restrict src, size_t n)

@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #ifndef IO_H
 #define IO_H
 

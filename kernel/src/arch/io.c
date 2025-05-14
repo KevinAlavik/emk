@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <arch/io.h>
 
 void outb(uint16_t port, uint8_t value)
