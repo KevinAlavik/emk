@@ -5,6 +5,7 @@
         "idt.h": "c",
         "limine.h": "c",
         "stddef.h": "c",
-        "stdint.h": "c"
+        "stdint.h": "c",
+        "typeinfo": "c"
     }
 }

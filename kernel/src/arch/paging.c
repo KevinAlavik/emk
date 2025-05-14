@@ -205,14 +205,16 @@ void paging_init(void)
     /* Map kernel sections */
     uint64_t text_start = ALIGN_DOWN((uint64_t)__text_start, PAGE_SIZE);
     uint64_t text_end = ALIGN_UP((uint64_t)__text_end, PAGE_SIZE);
+    PRINT_SECTION(".text", text_start, text_end);
     for (uint64_t addr = text_start; addr < text_end; addr += PAGE_SIZE)
     {
         uint64_t phys = addr - kvirt + kphys;
-        vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_NX);
+        vmap(kernel_pagemap, addr, phys, VMM_PRESENT);
     }
 
     uint64_t rodata_start = ALIGN_DOWN((uint64_t)__rodata_start, PAGE_SIZE);
     uint64_t rodata_end = ALIGN_UP((uint64_t)__rodata_end, PAGE_SIZE);
+    PRINT_SECTION(".rodata", rodata_start, rodata_end);
     for (uint64_t addr = rodata_start; addr < rodata_end; addr += PAGE_SIZE)
     {
         uint64_t phys = addr - kvirt + kphys;
@@ -221,6 +223,7 @@ void paging_init(void)
 
     uint64_t data_start = ALIGN_DOWN((uint64_t)__data_start, PAGE_SIZE);
     uint64_t data_end = ALIGN_UP((uint64_t)__data_end, PAGE_SIZE);
+    PRINT_SECTION(".data", data_start, data_end);
     for (uint64_t addr = data_start; addr < data_end; addr += PAGE_SIZE)
     {
         uint64_t phys = addr - kvirt + kphys;
