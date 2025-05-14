@@ -186,7 +186,7 @@ int vunmap(uint64_t *pagemap, uint64_t virt)
 void paging_init(void)
 {
     kernel_pagemap = palloc(1, true);
-    if (!kernel_pagemap || ((uint64_t)kernel_pagemap & (PAGE_SIZE - 1)))
+    if (!kernel_pagemap || !IS_PAGE_ALIGNED((uint64_t)kernel_pagemap))
     {
         kpanic(NULL, "Failed to allocate kernel pagemap");
     }
