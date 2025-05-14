@@ -2,7 +2,7 @@
 MAKEFLAGS += -rR
 .SUFFIXES:
 
-QEMUFLAGS := -m 2G -debugcon stdio
+QEMUFLAGS := -m 2G -serial stdio
 IMAGE_NAME := release/emk
 
 HOST_CC := cc

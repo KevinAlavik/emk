@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "stdnoreturn.h": "c",
+        "serial.h": "c"
+    }
+}
