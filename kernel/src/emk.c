@@ -30,7 +30,6 @@ void emk_entry(void)
     log_early("Initialized GDT");
     idt_init();
     log_early("Initialized IDT");
-    __asm__ volatile("int $0x01");
 
     hlt();
 }
