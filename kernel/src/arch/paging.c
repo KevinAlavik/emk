@@ -44,7 +44,7 @@ static inline uint64_t *get_or_alloc_table(uint64_t *table, uint64_t index, uint
     if (!(table[index] & VMM_PRESENT))
     {
         uint64_t *new_table = palloc(1, true);
-        if (!new_table || IS_PAGE_ALIGNED((uint64_t)new_table))
+        if (!new_table || !IS_PAGE_ALIGNED((uint64_t)new_table))
         {
             return NULL;
         }
