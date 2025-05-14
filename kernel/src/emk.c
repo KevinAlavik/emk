@@ -19,6 +19,8 @@ void emk_entry(void)
         /* Just halt and say nothing */
         hcf();
     }
+    log_early("Experimental Micro Kernel (EMK) 1.0 Copytright (c) 2025 Piraterna");
+    log_early("Compiled at %s %s", __TIME__, __DATE__);
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
