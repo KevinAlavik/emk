@@ -10,7 +10,9 @@
             "cppStandard": "${default}",
             "intelliSenseMode": "linux-gcc-x64",
             "defines": [
-                "LIMINE_API_REVISION=3"
+                "LIMINE_API_REVISION=3",
+                "FLANTERM_SUPPORT=1",
+                "BUILD_MODE=\"\""
             ]
         }
     ],

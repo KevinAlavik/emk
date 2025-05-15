@@ -4,3 +4,4 @@ limine/
 ovmf/
 release/
 *.log
+.config*

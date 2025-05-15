@@ -13,6 +13,10 @@
         "emk.h": "c",
         "heap.h": "c",
         "vmm.h": "c",
-        "align.h": "c"
+        "align.h": "c",
+        "cpu.h": "c",
+        "nanoprintf.h": "c",
+        "flanterm.h": "c",
+        "serial.h": "c"
     }
 }

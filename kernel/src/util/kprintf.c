@@ -1,6 +1,10 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
-#include <dev/serial.h>
 #include <util/kprintf.h>
+#include <dev/serial.h>
+#include <boot/emk.h>
+#if FLANTERM_SUPPORT
+#include <flanterm/flanterm.h>
+#endif // FLANTERM_SUPPORT
 
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
@@ -22,6 +26,10 @@ int kprintf(const char *fmt, ...)
     if (length >= 0 && length < (int)sizeof(buffer))
     {
         serial_write(COM1, (uint8_t *)buffer, length);
+#if FLANTERM_SUPPORT
+        if (ft_ctx)
+            flanterm_write(ft_ctx, (char *)buffer, length);
+#endif // FLANTERM_SUPPORT
     }
 
     va_end(args);

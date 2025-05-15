@@ -13,6 +13,10 @@
 #include <arch/paging.h>
 #include <mm/vmm.h>
 #include <mm/heap.h>
+#if FLANTERM_SUPPORT
+#include <flanterm/flanterm.h>
+#include <flanterm/backends/fb.h>
+#endif // FLANTERM_SUPPORT
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -24,6 +28,11 @@ __attribute__((used, section(".limine_requests"))) static volatile struct limine
 __attribute__((used, section(".limine_requests"))) volatile struct limine_executable_address_request kernel_address_request = {
     .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
     .response = 0};
+#if FLANTERM_SUPPORT
+__attribute__((used, section(".limine_requests"))) volatile struct limine_framebuffer_request framebuffer_request = {
+    .id = LIMINE_FRAMEBUFFER_REQUEST,
+    .response = 0};
+#endif // FLANTERM_SUPPORT
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
 
@@ -34,6 +43,10 @@ uint64_t kphys = 0;
 uint64_t kstack_top = 0;
 vctx_t *kvm_ctx = NULL;
 
+#if FLANTERM_SUPPORT
+struct flanterm_context *ft_ctx = NULL;
+#endif // FLANTERM_SUPPORT
+
 void emk_entry(void)
 {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
@@ -42,8 +55,28 @@ void emk_entry(void)
         /* Just halt and say nothing */
         hcf();
     }
+
+    /* Init flanterm if we compiled with support */
+#if FLANTERM_SUPPORT
+    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    ft_ctx = flanterm_fb_init(
+        NULL,
+        NULL,
+        framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch,
+        framebuffer->red_mask_size, framebuffer->red_mask_shift,
+        framebuffer->green_mask_size, framebuffer->green_mask_shift,
+        framebuffer->blue_mask_size, framebuffer->blue_mask_shift,
+        NULL,
+        NULL, NULL,
+        NULL, NULL,
+        NULL, NULL,
+        NULL, 0, 0, 1,
+        0, 0,
+        0);
+#endif // FLANTERM_SUPPORT
+
     log_early("Experimental Micro Kernel (EMK) 1.0 Copytright (c) 2025 Piraterna");
-    log_early("Compiled at %s %s", __TIME__, __DATE__);
+    log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no");
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
