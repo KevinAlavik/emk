@@ -75,7 +75,7 @@ void emk_entry(void)
         kpanic(NULL, "Failed to allocate single physical page");
 
     *a = 32;
-    log_early("Allocated 1 physical page: %llx", (uint64_t)a);
+    log_early("Allocated 1 physical page @ %llx", (uint64_t)a);
     pfree(a, 1);
     log_early("Initialized physical page manager");
 
@@ -104,7 +104,7 @@ void emk_entry(void)
     }
 
     *b = 32;
-    log_early("Allocated 1 virtual page: %llx", (uint64_t)b);
+    log_early("Allocated 1 virtual page @ %llx", (uint64_t)b);
     vfree(kvm_ctx, b);
     log_early("Initialized virtual page manager");
 
