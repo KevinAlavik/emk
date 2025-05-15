@@ -9,6 +9,10 @@
         "typeinfo": "c",
         "log.h": "c",
         "pmm.h": "c",
-        "paging.h": "c"
+        "paging.h": "c",
+        "emk.h": "c",
+        "heap.h": "c",
+        "vmm.h": "c",
+        "align.h": "c"
     }
 }

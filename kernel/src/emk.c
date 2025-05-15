@@ -12,6 +12,7 @@
 #include <mm/pmm.h>
 #include <arch/paging.h>
 #include <mm/vmm.h>
+#include <mm/heap.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -31,6 +32,7 @@ struct limine_memmap_response *memmap = NULL;
 uint64_t kvirt = 0;
 uint64_t kphys = 0;
 uint64_t kstack_top = 0;
+vctx_t *kvm_ctx = NULL;
 
 void emk_entry(void)
 {
@@ -91,7 +93,7 @@ void emk_entry(void)
     log_early("Initialized paging");
 
     /* Kernel Virtual Memory Context, not to be confused with KVM */
-    vctx_t *kvm_ctx = vinit(kernel_pagemap, 0x1000);
+    kvm_ctx = vinit(kernel_pagemap, 0x1000);
     if (!kvm_ctx)
     {
         kpanic(NULL, "Failed to create kernel VMM context");
@@ -107,6 +109,19 @@ void emk_entry(void)
     log_early("Allocated 1 virtual page @ %llx", (uint64_t)b);
     vfree(kvm_ctx, b);
     log_early("Initialized virtual page manager");
+
+    /* Setup kernel heap */
+    heap_init();
+    char *c = kmalloc(1);
+    if (!c)
+    {
+        kpanic(NULL, "Failed to allocate single byte on heap");
+    }
+
+    *c = 32;
+    log_early("Allocated 1 byte @ %llx", (uint64_t)c);
+    kfree(c);
+    log_early("Initialized kernel heap");
 
     hlt();
 }
