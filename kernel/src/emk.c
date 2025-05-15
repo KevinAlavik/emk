@@ -50,11 +50,6 @@ struct flanterm_context *ft_ctx = NULL;
 void emk_entry(void)
 {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
-    if (serial_init(COM1) != 0)
-    {
-        /* Just halt and say nothing */
-        hcf();
-    }
 
     /* Init flanterm if we compiled with support */
 #if FLANTERM_SUPPORT
@@ -75,12 +70,17 @@ void emk_entry(void)
         0);
 #endif // FLANTERM_SUPPORT
 
+    if (serial_init(COM1) != 0)
+    {
+        /* Just do nothing */
+    }
+
     log_early("Experimental Micro Kernel (EMK) 1.0 Copytright (c) 2025 Piraterna");
     log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no");
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
-        kpanic(NULL, "Limine base revision is not supported\n");
+        kpanic(NULL, "Limine base revision is not supported");
         hcf();
     }
 

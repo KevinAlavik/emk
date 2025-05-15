@@ -52,7 +52,6 @@ void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
 
     while (region)
     {
-
         if (region->next == NULL || region->start + region->pages < region->next->start)
         {
             new = (vregion_t *)palloc(1, true);
