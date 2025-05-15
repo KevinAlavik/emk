@@ -15,6 +15,7 @@ extern uint64_t kvirt;
 extern uint64_t kphys;
 extern uint64_t kstack_top;
 extern vctx_t *kvm_ctx;
+extern struct limine_rsdp_response *rsdp_response;
 
 #define HIGHER_HALF(ptr) ((void *)((uint64_t)(ptr) < hhdm_offset ? (uint64_t)(ptr) + hhdm_offset : (uint64_t)(ptr)))
 #define PHYSICAL(ptr) ((void *)((uint64_t)(ptr) >= hhdm_offset ? (uint64_t)(ptr) - hhdm_offset : (uint64_t)(ptr)))

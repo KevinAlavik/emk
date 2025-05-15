@@ -17,6 +17,7 @@
 #include <flanterm/flanterm.h>
 #include <flanterm/backends/fb.h>
 #endif // FLANTERM_SUPPORT
+#include <sys/acpi.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -33,6 +34,9 @@ __attribute__((used, section(".limine_requests"))) volatile struct limine_frameb
     .id = LIMINE_FRAMEBUFFER_REQUEST,
     .response = 0};
 #endif // FLANTERM_SUPPORT
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_rsdp_request rsdp_request = {
+    .revision = 0,
+    .id = LIMINE_RSDP_REQUEST};
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
 
@@ -42,6 +46,7 @@ uint64_t kvirt = 0;
 uint64_t kphys = 0;
 uint64_t kstack_top = 0;
 vctx_t *kvm_ctx = NULL;
+struct limine_rsdp_response *rsdp_response = NULL;
 
 #if FLANTERM_SUPPORT
 struct flanterm_context *ft_ctx = NULL;
@@ -89,6 +94,7 @@ void emk_entry(void)
     idt_init();
     log_early("Initialized IDT");
 
+    /* Setup physical memory*/
     if (!hhdm_request.response)
     {
         kpanic(NULL, "Failed to get HHDM request");
@@ -155,6 +161,15 @@ void emk_entry(void)
     log_early("Allocated 1 byte @ %llx", (uint64_t)c);
     kfree(c);
     log_early("Initialized kernel heap");
+
+    /* Setup ACPI and APIC */
+    rsdp_response = rsdp_request.response;
+    if (!rsdp_response)
+    {
+        kpanic(NULL, "Failed to get RSDP request");
+    }
+    acpi_init();
+    log_early("Initialized ACPI");
 
     hlt();
 }

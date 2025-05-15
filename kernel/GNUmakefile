@@ -53,10 +53,12 @@ endif
 CPPFLAGS := -I../external -I$(SRCDIR) -MMD -MP -DLIMINE_API_REVISION=3
 
 IMPLICIT_SRCS :=
+ifneq ($(MAKECMDGOALS),menuconfig)
 ifeq ($(CONFIG_KERNEL_HEAP_FF),y)
     IMPLICIT_SRCS += src/mm/heap/ff.c
 else
     $(error Error: No heap algorithm was defined. Please run "make menuconfig" and select one.)
+endif
 endif
 
 ifeq ($(CONFIG_ENABLE_FLANTERM),y)
