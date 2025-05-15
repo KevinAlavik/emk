@@ -95,6 +95,7 @@ void *palloc(size_t pages, bool higher_half)
         void *addr = (void *)(page_cache[--cache_index] * PAGE_SIZE);
         bitmap_set(bitmap, (uint64_t)addr / PAGE_SIZE);
         free_pages--;
+        memset(HIGHER_HALF(addr), 0, pages * PAGE_SIZE);
         spinlock_release(&pmm_lock);
         return higher_half ? (void *)((uint64_t)addr + hhdm_offset) : addr;
     }
@@ -122,6 +123,7 @@ void *palloc(size_t pages, bool higher_half)
                         free_pages -= pages;
 
                         void *addr = (void *)((start_bit + j - pages + 1) * PAGE_SIZE);
+                        memset(HIGHER_HALF(addr), 0, pages * PAGE_SIZE);
                         spinlock_release(&pmm_lock);
                         return higher_half ? (void *)((uint64_t)addr + hhdm_offset) : addr;
                     }
