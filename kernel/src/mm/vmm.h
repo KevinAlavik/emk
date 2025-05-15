@@ -3,6 +3,11 @@
 #define VMM_H
 
 #include <stdint.h>
+#include <stddef.h>
+
+#ifndef VPM_MIN_ADDR
+#define VPM_MIN_ADDR 0x1000
+#endif // VPM_MIN_ADDR
 
 typedef struct vm_region
 {
@@ -12,12 +17,13 @@ typedef struct vm_region
     /* TOOD: Maybe store flags */
 } vm_region_t;
 
-typedef struct vma_ctx
+typedef struct vpm_ctx
 {
     vm_region_t *root;
     uint64_t *pagemap;
-} vma_ctx_t;
+} vpm_ctx_t;
 
-void vmm_init();
+vpm_ctx_t *vmm_init(uint64_t *pm);
+void *valloc(vpm_ctx_t *ctx, size_t pages, uint64_t flags);
 
 #endif // VMM_H

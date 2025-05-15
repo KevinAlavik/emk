@@ -253,5 +253,10 @@ void paging_init(void)
         }
     }
 
+    for (uint64_t gb4 = 0; gb4 < 0x100000000; gb4 += PAGE_SIZE)
+    {
+        vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(gb4), gb4, VMM_PRESENT | VMM_WRITE);
+    }
+
     pmset(kernel_pagemap);
 }

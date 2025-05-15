@@ -6,6 +6,9 @@
         "limine.h": "c",
         "stddef.h": "c",
         "stdint.h": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "log.h": "c",
+        "pmm.h": "c",
+        "paging.h": "c"
     }
 }
