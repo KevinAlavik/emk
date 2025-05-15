@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #ifndef KPANIC_H
 #define KPANIC_H
 

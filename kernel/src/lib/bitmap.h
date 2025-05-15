@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #ifndef BITMAP_H
 #define BITMAP_H
 

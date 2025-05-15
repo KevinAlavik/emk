@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <arch/paging.h>
 #include <mm/pmm.h>
 #include <lib/string.h>

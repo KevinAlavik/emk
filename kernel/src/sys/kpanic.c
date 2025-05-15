@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <sys/kpanic.h>
 #include <util/log.h>
 #include <stdarg.h>

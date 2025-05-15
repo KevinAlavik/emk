@@ -1,3 +1,4 @@
+/* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <mm/pmm.h>
 #include <boot/emk.h>
 #include <util/log.h>
