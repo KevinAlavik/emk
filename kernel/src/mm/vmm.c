@@ -5,90 +5,144 @@
 #include <util/align.h>
 #include <boot/emk.h>
 #include <arch/paging.h>
+#include <lib/string.h>
 
-vpm_ctx_t *vmm_init(uint64_t *pm)
+vctx_t *vinit(uint64_t *pm, uint64_t start)
 {
-    if (!pm || !IS_PAGE_ALIGNED(PHYSICAL(pm)))
-        return NULL;
-
-    vpm_ctx_t *ctx = (vpm_ctx_t *)palloc(1, true);
+    vctx_t *ctx = (vctx_t *)palloc(1, true);
     if (!ctx)
         return NULL;
+    memset(ctx, 0, sizeof(vctx_t));
+    ctx->root = (vregion_t *)palloc(1, true);
+    if (!ctx->root)
+    {
+        pfree(ctx, 1);
+        return NULL;
+    }
 
     ctx->pagemap = pm;
-    ctx->root = NULL; /* valloc creates the root if not present */
+    ctx->root->start = start;
+    ctx->root->pages = 0;
     return ctx;
 }
 
-void *valloc(vpm_ctx_t *ctx, size_t pages, uint64_t flags)
+void vdestroy(vctx_t *ctx)
 {
-    if (!ctx || !pages)
-        return NULL;
+    if (ctx->root == NULL || ctx->pagemap == NULL)
+        return;
 
-    /* Allocate physical pages */
-    void *phys = palloc(pages, true);
-    if (!phys)
-        return NULL;
-
-    uint64_t virt = VPM_MIN_ADDR;
-    vm_region_t *prev = NULL;
-    vm_region_t *curr = ctx->root;
-
-    while (curr)
+    vregion_t *region = ctx->root;
+    while (region != NULL)
     {
-        uint64_t curr_end = curr->start + (curr->pages * PAGE_SIZE);
-        if (virt + (pages * PAGE_SIZE) <= curr->start)
+        vregion_t *next = region->next;
+        pfree(region, 1);
+        region = next;
+    }
+    pfree(ctx, 1);
+}
+
+void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
+{
+    if (ctx == NULL || ctx->root == NULL || ctx->pagemap == NULL)
+        return NULL;
+
+    vregion_t *region = ctx->root;
+    vregion_t *new = NULL;
+    vregion_t *last = ctx->root;
+
+    while (region)
+    {
+
+        if (region->next == NULL || region->start + region->pages < region->next->start)
         {
-            /* Found a gap */
+            new = (vregion_t *)palloc(1, true);
+            if (!new)
+                return NULL;
+
+            memset(new, 0, sizeof(vregion_t));
+            new->pages = pages;
+            new->flags = VFLAGS_TO_PFLAGS(flags);
+            new->start = region->start + (region->pages * PAGE_SIZE);
+            new->next = region->next;
+            new->prev = region;
+            region->next = new;
+            for (uint64_t i = 0; i < pages; i++)
+            {
+                uint64_t page = (uint64_t)palloc(1, false);
+                if (page == 0)
+                    return NULL;
+
+                vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+            }
+            return (void *)new->start;
+        }
+        region = region->next;
+    }
+
+    new = (vregion_t *)palloc(1, true);
+    if (!new)
+        return NULL;
+
+    memset(new, 0, sizeof(vregion_t));
+    last->next = new;
+    new->prev = last;
+    new->start = last->start + (last->pages * PAGE_SIZE);
+    new->pages = pages;
+    new->flags = VFLAGS_TO_PFLAGS(flags);
+    new->next = NULL;
+
+    for (uint64_t i = 0; i < pages; i++)
+    {
+        uint64_t page = (uint64_t)palloc(1, false);
+        if (page == 0)
+            return NULL;
+
+        vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+    }
+    return (void *)new->start;
+}
+
+void vfree(vctx_t *ctx, void *ptr)
+{
+    if (ctx == NULL)
+        return;
+
+    vregion_t *region = ctx->root;
+    while (region != NULL)
+    {
+        if (region->start == (uint64_t)ptr)
+        {
             break;
         }
-        virt = curr_end;
-        prev = curr;
-        curr = curr->next;
+        region = region->next;
     }
 
-    /* Map the virtual to physical pages */
-    for (size_t i = 0; i < pages; i++)
+    if (region == NULL)
+        return;
+
+    vregion_t *prev = region->prev;
+    vregion_t *next = region->next;
+
+    for (uint64_t i = 0; i < region->pages; i++)
     {
-        uint64_t vaddr = virt + (i * PAGE_SIZE);
-        uint64_t paddr = (uint64_t)phys + (i * PAGE_SIZE);
-        if (vmap(ctx->pagemap, vaddr, paddr, flags) != 0)
+        uint64_t virt = region->start + i * PAGE_SIZE;
+        uint64_t phys = virt_to_phys(kernel_pagemap, virt);
+
+        if (phys != 0)
         {
-            /* Mapping failed, unmap any mapped pages and free physical memory */
-            for (size_t j = 0; j < i; j++)
-            {
-                vunmap(ctx->pagemap, virt + (j * PAGE_SIZE));
-            }
-            pfree(phys, pages);
-            return NULL;
+            pfree((void *)phys, 1);
+            vunmap(ctx->pagemap, virt);
         }
     }
 
-    /* Create new region */
-    vm_region_t *region = (vm_region_t *)palloc(1, true);
-    if (!region)
-    {
-        /* Region allocation failed, clean up */
-        for (size_t i = 0; i < pages; i++)
-        {
-            vunmap(ctx->pagemap, virt + (i * PAGE_SIZE));
-        }
-        pfree(phys, pages);
-        return NULL;
-    }
+    if (prev != NULL)
+        prev->next = next;
 
-    region->start = virt;
-    region->pages = pages;
-    region->next = curr;
+    if (next != NULL)
+        next->prev = prev;
 
-    if (prev)
-    {
-        prev->next = region;
-    }
-    else
-    {
-        ctx->root = region;
-    }
+    if (region == ctx->root)
+        ctx->root = next;
 
-    return (void *)virt;
+    pfree(region, 1);
 }

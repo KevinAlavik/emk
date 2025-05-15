@@ -4,6 +4,14 @@
 
 #include <stdint.h>
 #include <boot/emk.h>
+#include <mm/vmm.h>
+
+// Macro to convert VALLOC_* flags to VMM_* page table flags
+#define VFLAGS_TO_PFLAGS(flags)                   \
+    (VMM_PRESENT |                                \
+     (((flags) & VALLOC_WRITE) ? VMM_WRITE : 0) | \
+     (((flags) & VALLOC_USER) ? VMM_USER : 0) |   \
+     (((flags) & VALLOC_EXEC) ? 0 : VMM_NX))
 
 #define VMM_PRESENT (1ULL << 0)
 #define VMM_WRITE (1ULL << 1)

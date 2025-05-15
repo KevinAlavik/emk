@@ -9,21 +9,35 @@
 #define VPM_MIN_ADDR 0x1000
 #endif // VPM_MIN_ADDR
 
-typedef struct vm_region
+#define VALLOC_NONE 0x0
+#define VALLOC_READ (1 << 0)
+#define VALLOC_WRITE (1 << 1)
+#define VALLOC_EXEC (1 << 2)
+#define VALLOC_USER (1 << 3)
+
+#define VALLOC_RW (VALLOC_READ | VALLOC_WRITE)
+#define VALLOC_RX (VALLOC_READ | VALLOC_EXEC)
+#define VALLOC_RWX (VALLOC_READ | VALLOC_WRITE | VALLOC_EXEC)
+
+typedef struct vregion
 {
     uint64_t start;
     uint64_t pages;
-    struct vm_region *next;
-    /* TOOD: Maybe store flags */
-} vm_region_t;
+    uint64_t flags;
+    struct vregion *next;
+    struct vregion *prev;
+} vregion_t;
 
-typedef struct vpm_ctx
+typedef struct vctx
 {
-    vm_region_t *root;
+    vregion_t *root;
     uint64_t *pagemap;
-} vpm_ctx_t;
+    uint64_t start;
+} vctx_t;
 
-vpm_ctx_t *vmm_init(uint64_t *pm);
-void *valloc(vpm_ctx_t *ctx, size_t pages, uint64_t flags);
+vctx_t *vinit(uint64_t *pm, uint64_t start);
+void vdestroy(vctx_t *ctx);
+void *valloc(vctx_t *ctx, size_t pages, uint64_t flags);
+void vfree(vctx_t *ctx, void *ptr);
 
 #endif // VMM_H

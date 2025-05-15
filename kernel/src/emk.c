@@ -68,7 +68,6 @@ void emk_entry(void)
     hhdm_offset = hhdm_request.response->offset;
     log_early("HHDM Offset: %llx", hhdm_offset);
     pmm_init();
-    log_early("Initialized physical page manager");
 
     /* Test allocate a single physical page */
     char *a = palloc(1, true);
@@ -78,6 +77,7 @@ void emk_entry(void)
     *a = 32;
     log_early("Allocated 1 physical page: %llx", (uint64_t)a);
     pfree(a, 1);
+    log_early("Initialized physical page manager");
 
     /* Setup virtual memory */
     if (!kernel_address_request.response)
@@ -91,14 +91,13 @@ void emk_entry(void)
     log_early("Initialized paging");
 
     /* Kernel Virtual Memory Context, not to be confused with KVM */
-    vpm_ctx_t *kvm_ctx = vmm_init(kernel_pagemap);
+    vctx_t *kvm_ctx = vinit(kernel_pagemap, 0x1000);
     if (!kvm_ctx)
     {
         kpanic(NULL, "Failed to create kernel VMM context");
     }
-    log_early("Initialized virtual page manager");
 
-    char *b = valloc(kvm_ctx, 1, VMM_PRESENT | VMM_WRITE);
+    char *b = valloc(kvm_ctx, 1, VALLOC_RW);
     if (!b)
     {
         kpanic(NULL, "Failed to allocate single virtual page");
@@ -106,6 +105,8 @@ void emk_entry(void)
 
     *b = 32;
     log_early("Allocated 1 virtual page: %llx", (uint64_t)b);
+    vfree(kvm_ctx, b);
+    log_early("Initialized virtual page manager");
 
     hlt();
 }
