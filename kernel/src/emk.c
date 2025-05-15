@@ -78,6 +78,14 @@ void emk_entry(void)
     log_early("Allocated 1 physical page: %llx", (uint64_t)a);
     pfree(a, 1);
 
+    /* Setup virtual memory */
+    if (!kernel_address_request.response)
+    {
+        kpanic(NULL, "Failed to get kernel address request");
+    }
+
+    kvirt = kernel_address_request.response->virtual_base;
+    kphys = kernel_address_request.response->physical_base;
     paging_init();
     log_early("Initialized paging");
 
