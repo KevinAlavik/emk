@@ -171,7 +171,7 @@ void emk_entry(void)
     acpi_init();
     log_early("Initialized ACPI");
 
-    void *madt = acpi_find_table("MADT");
+    void *madt = acpi_find_table("APIC");
     if (!madt)
     {
         kpanic(NULL, "Failed to find MADT table");
