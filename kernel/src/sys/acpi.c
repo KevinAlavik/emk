@@ -21,8 +21,6 @@ void acpi_init(void)
     if (memcmp(rsdp->signature, "RSD PTR", 7) != 0)
         kpanic(NULL, "Invalid RSDP signature!");
 
-    log_early("RSDP Signature: %.*s", 7, rsdp->signature);
-
     if (rsdp->revision != 0)
     {
         acpi_uses_xsdt = 1;
