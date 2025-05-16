@@ -71,7 +71,7 @@ void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
                 if (page == 0)
                     return NULL;
 
-                vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+                vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
             }
             return (void *)new->start;
         }
@@ -96,7 +96,7 @@ void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
         if (page == 0)
             return NULL;
 
-        vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+        vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
     }
     return (void *)new->start;
 }
@@ -109,6 +109,8 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
     vregion_t *region = ctx->root;
     vregion_t *new = NULL;
     vregion_t *last = ctx->root;
+
+    phys = ALIGN_DOWN(phys, PAGE_SIZE);
 
     while (region)
     {
@@ -127,11 +129,11 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
             region->next = new;
             for (uint64_t i = 0; i < pages; i++)
             {
-                uint64_t page = phys + i * PAGE_SIZE;
+                uint64_t page = phys + (i * PAGE_SIZE);
                 if (page == 0)
                     return NULL;
 
-                vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+                vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
             }
             return (void *)new->start;
         }
@@ -152,11 +154,11 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
 
     for (uint64_t i = 0; i < pages; i++)
     {
-        uint64_t page = phys + i * PAGE_SIZE;
+        uint64_t page = phys + (i * PAGE_SIZE);
         if (page == 0)
             return NULL;
 
-        vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+        vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
     }
     return (void *)new->start;
 }
@@ -184,7 +186,7 @@ void vfree(vctx_t *ctx, void *ptr)
 
     for (uint64_t i = 0; i < region->pages; i++)
     {
-        uint64_t virt = region->start + i * PAGE_SIZE;
+        uint64_t virt = region->start + (i * PAGE_SIZE);
         uint64_t phys = virt_to_phys(kernel_pagemap, virt);
 
         if (phys != 0)

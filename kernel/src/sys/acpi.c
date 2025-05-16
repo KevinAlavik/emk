@@ -17,9 +17,8 @@ void acpi_init(void)
     }
 
     acpi_rsdp_t *rsdp = (acpi_rsdp_t *)vallocat(kvm_ctx, 1, VALLOC_RW, rsdp_response->address);
-    log_early("Allocated RSDP at %p", rsdp);
 
-    if (memcmp(rsdp->signature, "RSD PTR", 7))
+    if (memcmp(rsdp->signature, "RSD PTR", 7) == 0)
         kpanic(NULL, "Invalid RSDP signature!");
 
     if (rsdp->revision != 0)
