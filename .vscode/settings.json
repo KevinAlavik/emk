@@ -20,6 +20,7 @@
         "serial.h": "c",
         "kpanic.h": "c",
         "smp.h": "c",
-        "string_view": "c"
+        "string_view": "c",
+        "lapic.h": "c"
     }
 }

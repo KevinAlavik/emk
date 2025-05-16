@@ -20,6 +20,9 @@
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
 #include <arch/smp.h>
+#include <sys/lapic.h>
+#include <sys/ioapic.h>
+#include <sys/pit.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -57,6 +60,12 @@ struct limine_mp_response *mp_response = NULL;
 #if FLANTERM_SUPPORT
 struct flanterm_context *ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
+
+void tick(struct register_ctx *)
+{
+    log_early("tick");
+    lapic_eoi();
+}
 
 void emk_entry(void)
 {
@@ -168,15 +177,6 @@ void emk_entry(void)
     kfree(c);
     log_early("Initialized kernel heap");
 
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    mp_response = mp_request.response;
-    smp_init();
-
     /* Setup ACPI and APIC */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -188,7 +188,24 @@ void emk_entry(void)
 
     /* Setup MADT */
     madt_init();
-    log_early("Initialized APIC");
+    ioapic_init();
+    log_early("Initialized IOAPIC");
+    lapic_init();
+    log_early("Initialized LAPIC");
+
+    /* Setup timer */
+    pit_init(tick);
+    log_early("Initialized Timer");
+
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
+    log_early("Initialized SMP");
 
     hlt();
 }
