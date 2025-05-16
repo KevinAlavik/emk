@@ -30,7 +30,7 @@ typedef struct acpi_madt_entry
 /* Entry Type 0: Processor Local APIC */
 typedef struct acpi_madt_lapic
 {
-    uint8_t type; /* 0 */
+    uint8_t type;
     uint8_t length;
     uint8_t acpi_proc_id; /* ACPI Processor ID */
     uint8_t apic_id;      /* APIC ID */
