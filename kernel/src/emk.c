@@ -175,14 +175,11 @@ void emk_entry(void)
     acpi_init();
     log_early("Initialized ACPI");
 
-    acpi_madt_t *madt = (acpi_madt_t *)acpi_find_table("APIC");
-    if (!madt)
-    {
-        kpanic(NULL, "Failed to find MADT table");
-    }
+    /* Setup MADT */
+    madt_init();
+    log_early("Initialized APIC");
 
-    log_early("Found MADT at %p", madt);
-
+    /* Setup SMP */
     if (!mp_request.response)
     {
         kpanic(NULL, "Failed to get MP request");
