@@ -101,6 +101,66 @@ void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
     return (void *)new->start;
 }
 
+void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
+{
+    if (ctx == NULL || ctx->root == NULL || ctx->pagemap == NULL)
+        return NULL;
+
+    vregion_t *region = ctx->root;
+    vregion_t *new = NULL;
+    vregion_t *last = ctx->root;
+
+    while (region)
+    {
+        if (region->next == NULL || region->start + region->pages < region->next->start)
+        {
+            new = (vregion_t *)palloc(1, true);
+            if (!new)
+                return NULL;
+
+            memset(new, 0, sizeof(vregion_t));
+            new->pages = pages;
+            new->flags = VFLAGS_TO_PFLAGS(flags);
+            new->start = region->start + (region->pages * PAGE_SIZE);
+            new->next = region->next;
+            new->prev = region;
+            region->next = new;
+            for (uint64_t i = 0; i < pages; i++)
+            {
+                uint64_t page = phys + i * PAGE_SIZE;
+                if (page == 0)
+                    return NULL;
+
+                vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+            }
+            return (void *)new->start;
+        }
+        region = region->next;
+    }
+
+    new = (vregion_t *)palloc(1, true);
+    if (!new)
+        return NULL;
+
+    memset(new, 0, sizeof(vregion_t));
+    last->next = new;
+    new->prev = last;
+    new->start = last->start + (last->pages * PAGE_SIZE);
+    new->pages = pages;
+    new->flags = VFLAGS_TO_PFLAGS(flags);
+    new->next = NULL;
+
+    for (uint64_t i = 0; i < pages; i++)
+    {
+        uint64_t page = phys + i * PAGE_SIZE;
+        if (page == 0)
+            return NULL;
+
+        vmap(ctx->pagemap, new->start + i * PAGE_SIZE, page, new->flags);
+    }
+    return (void *)new->start;
+}
+
 void vfree(vctx_t *ctx, void *ptr)
 {
     if (ctx == NULL)

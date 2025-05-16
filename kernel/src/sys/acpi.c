@@ -4,6 +4,7 @@
 #include <lib/string.h>
 #include <util/log.h>
 #include <sys/kpanic.h>
+#include <mm/vmm.h>
 
 static int acpi_uses_xsdt = 0;
 static void *acpi_rsdt_ptr = NULL;
@@ -15,7 +16,9 @@ void acpi_init(void)
         kpanic(NULL, "No RSDP provided");
     }
 
-    acpi_rsdp_t *rsdp = (acpi_rsdp_t *)HIGHER_HALF(rsdp_response->address);
+    acpi_rsdp_t *rsdp = (acpi_rsdp_t *)vallocat(kvm_ctx, 1, VALLOC_RW, rsdp_response->address);
+    log_early("Allocated RSDP at %p", rsdp);
+
     if (memcmp(rsdp->signature, "RSD PTR", 7))
         kpanic(NULL, "Invalid RSDP signature!");
 

@@ -38,6 +38,7 @@ typedef struct vctx
 vctx_t *vinit(uint64_t *pm, uint64_t start);
 void vdestroy(vctx_t *ctx);
 void *valloc(vctx_t *ctx, size_t pages, uint64_t flags);
+void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys);
 void vfree(vctx_t *ctx, void *ptr);
 
 #endif // VMM_H
