@@ -52,7 +52,7 @@ void *valloc(vctx_t *ctx, size_t pages, uint64_t flags)
 
     while (region)
     {
-        if (region->next == NULL || region->start + region->pages < region->next->start)
+        if (region->next == NULL || region->start + (region->pages * PAGE_SIZE) < region->next->start)
         {
             new = (vregion_t *)palloc(1, true);
             if (!new)
@@ -112,7 +112,7 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
 
     while (region)
     {
-        if (region->next == NULL || region->start + region->pages < region->next->start)
+        if (region->next == NULL || region->start + (region->pages * PAGE_SIZE) < region->next->start)
         {
             new = (vregion_t *)palloc(1, true);
             if (!new)

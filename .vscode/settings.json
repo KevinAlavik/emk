@@ -17,6 +17,7 @@
         "cpu.h": "c",
         "nanoprintf.h": "c",
         "flanterm.h": "c",
-        "serial.h": "c"
+        "serial.h": "c",
+        "kpanic.h": "c"
     }
 }
