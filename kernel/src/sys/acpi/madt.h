@@ -30,8 +30,7 @@ typedef struct acpi_madt_entry
 /* Entry Type 0: Processor Local APIC */
 typedef struct acpi_madt_lapic
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint8_t acpi_proc_id; /* ACPI Processor ID */
     uint8_t apic_id;      /* APIC ID */
     uint32_t flags;       /* Bit 0: Processor Enabled, Bit 1: Online Capable */
@@ -40,8 +39,7 @@ typedef struct acpi_madt_lapic
 /* Entry Type 1: I/O APIC */
 typedef struct acpi_madt_ioapic
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint8_t ioapic_id;    /* I/O APIC's ID */
     uint8_t reserved;     /* Reserved (0) */
     uint32_t ioapic_addr; /* I/O APIC Address */
@@ -51,8 +49,7 @@ typedef struct acpi_madt_ioapic
 /* Entry Type 2: I/O APIC Interrupt Source Override */
 typedef struct acpi_madt_ioapic_src_ovr
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint8_t bus_source; /* Bus Source */
     uint8_t irq_source; /* IRQ Source */
     uint32_t gsi;       /* Global System Interrupt */
@@ -62,8 +59,7 @@ typedef struct acpi_madt_ioapic_src_ovr
 /* Entry Type 3: I/O APIC Non-Maskable Interrupt Source */
 typedef struct acpi_madt_ioapic_nmi_src
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint8_t nmi_source; /* NMI Source */
     uint8_t reserved;   /* Reserved */
     uint16_t flags;     /* Flags */
@@ -73,8 +69,7 @@ typedef struct acpi_madt_ioapic_nmi_src
 /* Entry Type 4: Local APIC Non-Maskable Interrupt */
 typedef struct acpi_madt_lapic_nmi
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint8_t acpi_proc_id; /* ACPI Processor ID (0xFF for all processors) */
     uint16_t flags;       /* Flags */
     uint8_t lint;         /* LINT# (0 or 1) */
@@ -83,8 +78,7 @@ typedef struct acpi_madt_lapic_nmi
 /* Entry Type 5: Local APIC Address Override */
 typedef struct acpi_madt_lapic_addr_ovr
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint16_t reserved;   /* Reserved */
     uint64_t lapic_addr; /* 64-bit Physical Address of Local APIC */
 } __attribute__((packed)) acpi_madt_lapic_addr_ovr_t;
@@ -92,8 +86,7 @@ typedef struct acpi_madt_lapic_addr_ovr
 /* Entry Type 9: Processor Local x2APIC */
 typedef struct acpi_madt_lx2apic
 {
-    uint8_t type;
-    uint8_t length;
+    acpi_madt_entry_t header;
     uint16_t reserved;
     uint32_t x2apic_id; /* Processor's Local x2APIC ID */
     uint32_t flags;     /* Flags (same as Local APIC) */

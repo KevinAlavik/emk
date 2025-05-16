@@ -18,6 +18,7 @@
 #include <flanterm/backends/fb.h>
 #endif // FLANTERM_SUPPORT
 #include <sys/acpi.h>
+#include <sys/acpi/madt.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -37,6 +38,9 @@ __attribute__((used, section(".limine_requests"))) volatile struct limine_frameb
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_rsdp_request rsdp_request = {
     .revision = 0,
     .id = LIMINE_RSDP_REQUEST};
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_mp_request mp_request = {
+    .revision = 0,
+    .id = LIMINE_MP_REQUEST};
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
 
@@ -171,13 +175,20 @@ void emk_entry(void)
     acpi_init();
     log_early("Initialized ACPI");
 
-    void *madt = acpi_find_table("APIC");
+    acpi_madt_t *madt = (acpi_madt_t *)acpi_find_table("APIC");
     if (!madt)
     {
         kpanic(NULL, "Failed to find MADT table");
     }
 
     log_early("Found MADT at %p", madt);
+
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    log_early("%d available cores", mp_request.response->cpu_count);
 
     hlt();
 }
