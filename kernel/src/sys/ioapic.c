@@ -16,7 +16,7 @@ void ioapic_init()
 
     for (uint8_t i = 0; i <= count; ++i)
     {
-        ioapic_write(ioapic, IOAPIC_REDTBL + 2 * i, 0x00010000 | (32 + i));
+        ioapic_write(ioapic, IOAPIC_REDTBL + 2 * i, (32 + i));
         ioapic_write(ioapic, IOAPIC_REDTBL + 2 * i + 1, 0);
     }
 }
