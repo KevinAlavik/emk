@@ -19,6 +19,7 @@
 #endif // FLANTERM_SUPPORT
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
+#include <arch/smp.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -51,6 +52,7 @@ uint64_t kphys = 0;
 uint64_t kstack_top = 0;
 vctx_t *kvm_ctx = NULL;
 struct limine_rsdp_response *rsdp_response = NULL;
+struct limine_mp_response *mp_response = NULL;
 
 #if FLANTERM_SUPPORT
 struct flanterm_context *ft_ctx = NULL;
@@ -166,6 +168,15 @@ void emk_entry(void)
     kfree(c);
     log_early("Initialized kernel heap");
 
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
+
     /* Setup ACPI and APIC */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -178,14 +189,6 @@ void emk_entry(void)
     /* Setup MADT */
     madt_init();
     log_early("Initialized APIC");
-
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    log_early("%d available cores", mp_request.response->cpu_count);
 
     hlt();
 }

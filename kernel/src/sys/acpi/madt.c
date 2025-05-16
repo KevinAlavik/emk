@@ -19,23 +19,36 @@ void madt_init()
         kpanic(NULL, "Failed to find MADT table");
     }
 
-    uint64_t offset = 0;
-    int i = 0;
-    while (1)
+    if (madt->sdt.length < sizeof(acpi_madt_t))
     {
-        if (offset > madt->sdt.length - sizeof(acpi_madt_t))
-            break;
+        kpanic(NULL, "MADT table is too small");
+    }
 
+    uint64_t offset = 0;
+    while (offset < madt->sdt.length - sizeof(acpi_madt_t))
+    {
         acpi_madt_entry_t *entry = (acpi_madt_entry_t *)(madt->table + offset);
 
-        if (entry->type == 0)
-            i++;
-        else if (entry->type == MADT_ENTRY_IOAPIC)
-            madt_ioapic_list[madt_ioapic_len++] = (acpi_madt_ioapic_t *)entry;
+        if (entry->length == 0 || offset + entry->length > madt->sdt.length - sizeof(acpi_madt_t))
+        {
+            kpanic(NULL, "Invalid MADT entry length or overflow");
+        }
+
+        if (entry->type == MADT_ENTRY_IOAPIC)
+        {
+            if (madt_ioapic_len < 256)
+                madt_ioapic_list[madt_ioapic_len++] = (acpi_madt_ioapic_t *)entry;
+        }
         else if (entry->type == MADT_ENTRY_IOAPIC_SRC_OVR)
-            madt_iso_list[madt_iso_len++] = (acpi_madt_ioapic_src_ovr_t *)entry;
+        {
+            if (madt_iso_len < 256)
+                madt_iso_list[madt_iso_len++] = (acpi_madt_ioapic_src_ovr_t *)entry;
+        }
         else if (entry->type == MADT_ENTRY_LAPIC_ADDR_OVR)
+        {
             lapic_addr = (uint64_t *)((acpi_madt_lapic_addr_ovr_t *)entry)->lapic_addr;
+        }
+
         offset += entry->length;
     }
 }

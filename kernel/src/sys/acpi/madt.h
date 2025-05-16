@@ -93,6 +93,12 @@ typedef struct acpi_madt_lx2apic
     uint32_t acpi_id;   /* ACPI ID */
 } __attribute__((packed)) acpi_madt_lx2apic_t;
 
+extern acpi_madt_ioapic_t *madt_ioapic_list[256];
+extern acpi_madt_ioapic_src_ovr_t *madt_iso_list[256];
+extern uint32_t madt_ioapic_len;
+extern uint32_t madt_iso_len;
+extern uint64_t *lapic_addr;
+
 void madt_init();
 
 #endif // MADT_H

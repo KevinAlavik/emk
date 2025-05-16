@@ -18,6 +18,8 @@
         "nanoprintf.h": "c",
         "flanterm.h": "c",
         "serial.h": "c",
-        "kpanic.h": "c"
+        "kpanic.h": "c",
+        "smp.h": "c",
+        "string_view": "c"
     }
 }
