@@ -18,8 +18,10 @@ void acpi_init(void)
 
     acpi_rsdp_t *rsdp = (acpi_rsdp_t *)vallocat(kvm_ctx, 1, VALLOC_RW, rsdp_response->address);
 
-    if (memcmp(rsdp->signature, "RSD PTR", 7) == 0)
+    if (memcmp(rsdp->signature, "RSD PTR", 7) != 0)
         kpanic(NULL, "Invalid RSDP signature!");
+
+    log_early("RSDP Signature: %.*s", 7, rsdp->signature);
 
     if (rsdp->revision != 0)
     {
