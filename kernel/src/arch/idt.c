@@ -5,10 +5,7 @@
 #include <arch/cpu.h>
 #include <util/log.h>
 #include <sys/kpanic.h>
-#include <sys/lapic.h>
 #include <arch/smp.h>
-#include <sys/lapic.h>
-#include <sys/ioapic.h>
 #include <stdbool.h>
 
 struct idt_entry __attribute__((aligned(16))) idt_descriptor[256] = {0};
@@ -64,12 +61,5 @@ int idt_register_handler(size_t vector, idt_intr_handler handler)
         return 1;
 
     real_handlers[vector] = handler;
-
-    if (vector >= 32 && vector < 48)
-    {
-        size_t irq = vector - 32;
-        ioapic_redirect_irq(bootstrap_lapic_id, vector, irq, false);
-    }
-
     return 0;
 }

@@ -17,11 +17,7 @@
 #include <flanterm/flanterm.h>
 #include <flanterm/backends/fb.h>
 #endif // FLANTERM_SUPPORT
-#include <sys/acpi.h>
-#include <sys/acpi/madt.h>
 #include <arch/smp.h>
-#include <sys/lapic.h>
-#include <sys/ioapic.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -59,21 +55,6 @@ struct limine_mp_response *mp_response = NULL;
 #if FLANTERM_SUPPORT
 struct flanterm_context *ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
-
-void tick(struct register_ctx *)
-{
-    log_early("tick");
-    lapic_eoi();
-}
-
-void timer_init()
-{
-    uint16_t divisor = 11932;
-    outb(0x43, 0x36);
-    outb(0x40, divisor & 0xFF);
-    outb(0x40, (divisor >> 8) & 0xFF);
-    idt_register_handler(32, tick);
-}
 
 void emk_entry(void)
 {
@@ -194,25 +175,6 @@ void emk_entry(void)
     mp_response = mp_request.response;
     smp_init();
     log_early("Initialized SMP");
-
-    /* Setup ACPI and APIC */
-    rsdp_response = rsdp_request.response;
-    if (!rsdp_response)
-    {
-        kpanic(NULL, "Failed to get RSDP request");
-    }
-    acpi_init();
-    log_early("Initialized ACPI");
-
-    /* Setup MADT */
-    madt_init();
-    ioapic_init();
-    log_early("Initialized IOAPIC");
-    lapic_init();
-    log_early("Initialized LAPIC");
-
-    /* Setup timer */
-    timer_init();
 
     hlt();
 }
