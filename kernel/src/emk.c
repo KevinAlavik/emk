@@ -72,7 +72,7 @@ void timer_init()
     outb(0x43, 0x36);
     outb(0x40, divisor & 0xFF);
     outb(0x40, (divisor >> 8) & 0xFF);
-    idt_register_handler(0x32, tick);
+    idt_register_handler(32, tick);
 }
 
 void emk_entry(void)
@@ -185,6 +185,16 @@ void emk_entry(void)
     kfree(c);
     log_early("Initialized kernel heap");
 
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
+    log_early("Initialized SMP");
+
     /* Setup ACPI and APIC */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -203,16 +213,6 @@ void emk_entry(void)
 
     /* Setup timer */
     timer_init();
-
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    mp_response = mp_request.response;
-    smp_init();
-    log_early("Initialized SMP");
 
     hlt();
 }

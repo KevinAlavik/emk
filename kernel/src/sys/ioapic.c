@@ -1,6 +1,7 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <sys/ioapic.h>
 #include <boot/emk.h>
+#include <util/log.h>
 
 void ioapic_init()
 {
@@ -134,6 +135,8 @@ void ioapic_redirect_gsi(uint32_t lapic_id, uint8_t vec, uint32_t gsi, uint16_t 
 
 void ioapic_redirect_irq(uint32_t lapic_id, uint8_t vec, uint8_t irq, bool mask)
 {
+    log_early("IOAPIC redirect: IRQ=%u -> Vector=0x%X (mask=%s)", irq, vec, mask ? "true" : "false");
+
     for (uint32_t idx = 0; idx < madt_iso_len; idx++)
     {
         if (!madt_iso_list[idx])
@@ -142,13 +145,20 @@ void ioapic_redirect_irq(uint32_t lapic_id, uint8_t vec, uint8_t irq, bool mask)
         }
 
         acpi_madt_ioapic_src_ovr_t *iso = madt_iso_list[idx];
+
+        log_early("  ISO override found: irq_source=%u, gsi=%u, flags=0x%X",
+                  iso->irq_source, iso->gsi, iso->flags);
+
         if (iso->irq_source == irq)
         {
+            log_early("  Match found. Redirecting IRQ %u (GSI %u) to vector 0x%X",
+                      irq, iso->gsi, vec);
             ioapic_redirect_gsi(lapic_id, vec, iso->gsi, iso->flags, mask);
             return;
         }
     }
 
+    log_early("  No ISO match. Redirecting IRQ %u directly to vector 0x%X", irq, vec);
     ioapic_redirect_gsi(lapic_id, vec, irq, 0, mask);
 }
 

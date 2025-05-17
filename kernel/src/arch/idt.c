@@ -60,12 +60,16 @@ void idt_init()
 
 int idt_register_handler(size_t vector, idt_intr_handler handler)
 {
-    if (real_handlers[vector] != idt_default_interrupt_handler)
+    if (vector >= 256 || handler == NULL)
+        return 1;
+
+    real_handlers[vector] = handler;
+
+    if (vector >= 32 && vector < 48)
     {
-        real_handlers[vector] = handler;
-        if (vector <= 14)
-            ioapic_redirect_irq(bootstrap_lapic_id, vector + 32, vector, false);
-        return 0;
+        size_t irq = vector - 32;
+        ioapic_redirect_irq(bootstrap_lapic_id, vector, irq, false);
     }
-    return 1;
+
+    return 0;
 }
