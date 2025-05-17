@@ -49,6 +49,8 @@ void lapic_ipi(uint32_t id, uint8_t dat);
 void lapic_send_all_int(uint32_t id, uint32_t vec);
 void lapic_send_others_int(uint32_t id, uint32_t vec);
 
+void lapic_init_cpu(uint32_t id);
+void lapic_start_cpu(uint32_t id, uint32_t vec);
 uint32_t lapic_get_id();
 
 #endif // LAPIC_H

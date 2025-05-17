@@ -22,7 +22,6 @@
 #include <arch/smp.h>
 #include <sys/lapic.h>
 #include <sys/ioapic.h>
-#include <sys/pit.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -65,6 +64,15 @@ void tick(struct register_ctx *)
 {
     log_early("tick");
     lapic_eoi();
+}
+
+void timer_init()
+{
+    uint16_t divisor = 11932;
+    outb(0x43, 0x36);
+    outb(0x40, divisor & 0xFF);
+    outb(0x40, (divisor >> 8) & 0xFF);
+    idt_register_handler(0x32, tick);
 }
 
 void emk_entry(void)
@@ -194,8 +202,7 @@ void emk_entry(void)
     log_early("Initialized LAPIC");
 
     /* Setup timer */
-    pit_init(tick);
-    log_early("Initialized Timer");
+    timer_init();
 
     /* Setup SMP */
     if (!mp_request.response)
