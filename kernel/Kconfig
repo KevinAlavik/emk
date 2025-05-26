@@ -1,39 +1,54 @@
 mainmenu "EMK Build Configuration"
 
-choice
-    prompt "Build Mode"
-    default BUILD_MODE_DEBUG
+menu "Build"
+    choice
+        prompt "Build Mode"
+        default BUILD_MODE_DEBUG
 
-config BUILD_MODE_DEBUG
-    bool "Debug"
-    help
-      Build with debug symbols and no optimizations.
+    config BUILD_MODE_DEBUG
+        bool "Debug"
+        help
+          Build with debug symbols and no optimizations.
 
-config BUILD_MODE_RELEASE
-    bool "Release"
-    help
-      Build with optimizations and no debug symbols.
+    config BUILD_MODE_RELEASE
+        bool "Release"
+        help
+          Build with optimizations and no debug symbols.
 
-endchoice
+    endchoice
+endmenu
 
-choice
-    prompt "Kernel Heap Algorithm"
-    default KERNEL_HEAP_FF
+menu "Memory"
+    choice
+        prompt "Kernel Heap Algorithm"
+        default KERNEL_HEAP_FF
 
-config KERNEL_HEAP_FF
-    bool "First-Fit"
-    help
-      Use the First-Fit memory allocation algorithm (ff.c).
+    config KERNEL_HEAP_FF
+        bool "First-Fit"
+        help
+          Use the First-Fit memory allocation algorithm (ff.c).
 
-endchoice
+    endchoice
 
-config ENABLE_FLANTERM
-    bool "Enable Flanterm Support"
-    help
-      Includes support for the Flanterm terminal emulator. Useful for debugging real hardware.
+    config KERNEL_HEAP_POOL_SIZE
+        int "Pool Size (Pages)"
+        default 512
+        depends on KERNEL_HEAP_FF
+        help
+          Set the pool size in pages for the First-Fit heap algorithm.
+endmenu
 
-config CC
-    string "C Compiler"
-    default "gcc"
-    help
-      Path to the C compiler to use for building.
+menu "Toolchain"
+    config CC
+        string "C Compiler"
+        default "gcc"
+        help
+          Path to the C compiler to use for building.
+endmenu
+
+menu "Extras"
+    config ENABLE_FLANTERM
+        bool "Enable Flanterm Support"
+        help
+          Includes support for the Flanterm terminal emulator. Useful for debugging real hardware.
+endmenu

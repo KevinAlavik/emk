@@ -6,6 +6,7 @@
 #include <boot/emk.h>
 #include <util/align.h>
 #include <sys/kpanic.h>
+#include <util/log.h>
 
 void *pool;
 block_t *freelist = NULL;
@@ -18,6 +19,7 @@ void heap_init()
     freelist = (block_t *)pool;
     freelist->size = (FF_POOL_SIZE * PAGE_SIZE) - sizeof(block_t);
     freelist->next = NULL;
+    log_early("Initialized heap with a pool of %d pages (~%dMB)", FF_POOL_SIZE, DIV_ROUND_UP(FF_POOL_SIZE * PAGE_SIZE, 1024 * 1024));
 }
 
 void *kmalloc(size_t size)
@@ -73,10 +75,35 @@ void kfree(void *ptr)
     if (!ptr)
         return;
 
-    /* get block header */
     block_t *block = (block_t *)((uint8_t *)ptr - sizeof(block_t));
 
-    /* insert freed block at head of freelist */
-    block->next = freelist;
-    freelist = block;
+    /* insert block sorted by address in freelist */
+    block_t **cur = &freelist;
+    while (*cur && *cur < block)
+    {
+        cur = &(*cur)->next;
+    }
+
+    block->next = *cur;
+    *cur = block;
+
+    /* coalesce with next block if adjacent */
+    if (block->next && (uint8_t *)block + sizeof(block_t) + block->size == (uint8_t *)block->next)
+    {
+        block->size += sizeof(block_t) + block->next->size;
+        block->next = block->next->next;
+    }
+
+    /* coalesce with previous block if adjacent */
+    if (cur != &freelist)
+    {
+        block_t *prev = freelist;
+        while (prev->next != block)
+            prev = prev->next;
+        if ((uint8_t *)prev + sizeof(block_t) + prev->size == (uint8_t *)block)
+        {
+            prev->size += sizeof(block_t) + block->size;
+            prev->next = block->next;
+        }
+    }
 }

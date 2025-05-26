@@ -7,7 +7,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define FF_POOL_SIZE 512 // 2MB, in pages
+#ifndef FF_POOL_SIZE
+#define FF_POOL_SIZE 512
+#endif // FF_POOL_SIZE
 
 typedef struct block
 {
