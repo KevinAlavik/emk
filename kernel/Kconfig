@@ -31,3 +31,9 @@ config ENABLE_FLANTERM
     bool "Enable Flanterm Support"
     help
       Includes support for the Flanterm terminal emulator. Useful for debugging real hardware.
+
+config CC
+    string "C Compiler"
+    default "gcc"
+    help
+      Path to the C compiler to use for building.

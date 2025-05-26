@@ -22,5 +22,8 @@
         "smp.h": "c",
         "string_view": "c",
         "lapic.h": "c"
-    }
+    },
+    "editor.formatOnPaste": true,
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true
 }

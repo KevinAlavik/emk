@@ -15,8 +15,8 @@ ifneq ("$(wildcard $(CONFIG))","")
     include $(CONFIG)
 endif
 
-CC := gcc
-AS := gcc
+CC := $(CONFIG_CC)
+AS := $(CC)
 NASM := nasm
 
 ifeq ($(BUILD_MODE),)
