@@ -5,6 +5,7 @@
 #if FLANTERM_SUPPORT
 #include <flanterm/flanterm.h>
 #endif // FLANTERM_SUPPORT
+#include <sys/spinlock.h>
 
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
 #define NANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS 1
@@ -16,8 +17,12 @@
 #define NANOPRINTF_IMPLEMENTATION
 #include <nanoprintf.h>
 
+static spinlock_t kprintf_lock = {0};
+
 int kprintf(const char *fmt, ...)
 {
+    spinlock_acquire(&kprintf_lock);
+
     va_list args;
     va_start(args, fmt);
     char buffer[1024];
@@ -33,6 +38,8 @@ int kprintf(const char *fmt, ...)
     }
 
     va_end(args);
+
+    spinlock_release(&kprintf_lock);
     return length;
 }
 

@@ -5,6 +5,7 @@
 #include <util/kprintf.h>
 #include <lib/string.h>
 #include <arch/cpu.h>
+#include <arch/smp.h>
 
 static const char *strings[32] = {
     "Division by Zero",
@@ -126,7 +127,11 @@ void kpanic(struct register_ctx *ctx, const char *fmt, ...)
         }
     }
 
-    log_panic("=== Kernel panic: '%s' @ 0x%.16llx ===", buf, regs.rip);
+    cpu_local_t *cpu = get_cpu_local();
+    if (cpu)
+        log_panic("=== Kernel panic: '%s' on CPU %d @ 0x%.16llx ===", buf, cpu->cpu_index, regs.rip);
+    else
+        log_panic("=== Kernel panic: '%s' on CPU ??? @ 0x%.16llx ===", buf, regs.rip);
     log_panic("Registers:");
     log_panic("  rax: 0x%.16llx  rbx:    0x%.16llx  rcx: 0x%.16llx  rdx: 0x%.16llx", regs.rax, regs.rbx, regs.rcx, regs.rdx);
     log_panic("  rsi: 0x%.16llx  rdi:    0x%.16llx  rbp: 0x%.16llx  rsp: 0x%.16llx", regs.rsi, regs.rdi, regs.rbp, regs.rsp);

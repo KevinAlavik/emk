@@ -2,7 +2,7 @@
 MAKEFLAGS += -rR
 .SUFFIXES:
 
-QEMUFLAGS := -m 2G -serial stdio -smp 4
+QEMUFLAGS := -serial stdio -smp 4
 USER_QEMUFLAGS ?=
 IMAGE_NAME := release/emk
 

@@ -176,5 +176,7 @@ void emk_entry(void)
     smp_init();
     log_early("Initialized SMP");
 
+    __asm__ volatile("int $0x01");
+
     hlt();
 }

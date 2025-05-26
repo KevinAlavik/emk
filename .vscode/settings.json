@@ -21,7 +21,8 @@
         "kpanic.h": "c",
         "smp.h": "c",
         "string_view": "c",
-        "lapic.h": "c"
+        "lapic.h": "c",
+        "spinlock.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
