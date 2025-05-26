@@ -51,6 +51,7 @@ else
 endif
 
 CPPFLAGS := -I../external -I$(SRCDIR) -MMD -MP -DLIMINE_API_REVISION=3
+CFLAGS +=  -std=c99
 
 IMPLICIT_SRCS :=
 ifneq ($(MAKECMDGOALS),menuconfig)

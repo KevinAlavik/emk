@@ -3,6 +3,7 @@
 #define SMP_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 extern uint32_t bootstrap_lapic_id;
 
@@ -10,6 +11,7 @@ typedef struct
 {
     uint32_t lapic_id;
     uint32_t cpu_index;
+    bool ready;
 } cpu_local_t;
 
 void smp_init();

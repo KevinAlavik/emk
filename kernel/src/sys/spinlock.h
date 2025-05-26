@@ -19,7 +19,7 @@ static inline void spinlock_acquire(spinlock_t *lock)
 {
     while (__atomic_test_and_set(&lock->lock, __ATOMIC_ACQUIRE))
     {
-        asm volatile("pause" ::: "memory");
+        __asm__ volatile("pause" ::: "memory");
     }
 }
 

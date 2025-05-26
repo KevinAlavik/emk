@@ -35,4 +35,6 @@ extern struct limine_mp_response *mp_response;
 extern struct flanterm_context *ft_ctx;
 #endif // FLANTERM_SUPPORT
 
+#define LOG_SEPARATOR "----------------------------------------"
+
 #endif // EMK_H

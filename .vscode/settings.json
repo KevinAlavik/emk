@@ -22,7 +22,8 @@
         "smp.h": "c",
         "string_view": "c",
         "lapic.h": "c",
-        "spinlock.h": "c"
+        "spinlock.h": "c",
+        "fb.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,

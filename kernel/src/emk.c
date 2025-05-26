@@ -86,6 +86,7 @@ void emk_entry(void)
 
     log_early("Experimental Micro Kernel (EMK) 1.0 Copytright (c) 2025 Piraterna");
     log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no");
+    log_early("%s", LOG_SEPARATOR);
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
     {
@@ -94,9 +95,16 @@ void emk_entry(void)
     }
 
     gdt_init();
-    log_early("Initialized GDT");
     idt_init();
-    log_early("Initialized IDT");
+
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
 
     /* Setup physical memory*/
     if (!hhdm_request.response)
@@ -111,7 +119,6 @@ void emk_entry(void)
 
     memmap = memmap_request.response;
     hhdm_offset = hhdm_request.response->offset;
-    log_early("HHDM Offset: %llx", hhdm_offset);
     pmm_init();
 
     /* Test allocate a single physical page */
@@ -120,9 +127,7 @@ void emk_entry(void)
         kpanic(NULL, "Failed to allocate single physical page");
 
     *a = 32;
-    log_early("Allocated 1 physical page @ %llx", (uint64_t)a);
     pfree(a, 1);
-    log_early("Initialized physical page manager");
 
     /* Setup virtual memory */
     if (!kernel_address_request.response)
@@ -133,7 +138,6 @@ void emk_entry(void)
     kvirt = kernel_address_request.response->virtual_base;
     kphys = kernel_address_request.response->physical_base;
     paging_init();
-    log_early("Initialized paging");
 
     /* Kernel Virtual Memory Context, not to be confused with KVM */
     kvm_ctx = vinit(kernel_pagemap, 0x1000);
@@ -149,9 +153,7 @@ void emk_entry(void)
     }
 
     *b = 32;
-    log_early("Allocated 1 virtual page @ %llx", (uint64_t)b);
     vfree(kvm_ctx, b);
-    log_early("Initialized virtual page manager");
 
     /* Setup kernel heap */
     heap_init();
@@ -162,21 +164,12 @@ void emk_entry(void)
     }
 
     *c = 32;
-    log_early("Allocated 1 byte @ %llx", (uint64_t)c);
     kfree(c);
-    log_early("Initialized kernel heap");
 
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    mp_response = mp_request.response;
-    smp_init();
-    log_early("Initialized SMP");
-
-    __asm__ volatile("int $0x01");
+    /* Finished */
+    log_early("%s", LOG_SEPARATOR);
+    uint32_t uptime = 0;
+    log_early("Finished initializing EMK v1.0, took %d seconds", uptime); /* Still not usermode, so keep using log_early */
 
     hlt();
 }

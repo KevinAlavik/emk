@@ -49,6 +49,9 @@ void smp_entry(struct limine_mp_info *smp_info)
     set_cpu_local(cpu);
     atomic_fetch_add(&started_cpus, 1);
 
+    log_early("CPU %d is up", cpu->cpu_index);
+
+    cpu->ready = true;
     while (1)
         __asm__ volatile("hlt");
 }
@@ -67,21 +70,37 @@ void smp_init(void)
         memset(&cpu_locals[i], 0, sizeof(cpu_local_t));
         cpu_locals[i].lapic_id = info->lapic_id;
         cpu_locals[i].cpu_index = i;
+        cpu_locals[i].ready = false;
 
         if (info->lapic_id == bootstrap_lapic_id)
         {
             set_cpu_local(&cpu_locals[i]);
-            log_early("CPU %u (LAPIC %u) is the bootstrap processor", i, info->lapic_id);
+            log_early("CPU %u is the bootstrap processor", i);
             atomic_fetch_add(&started_cpus, 1);
+            cpu_locals[i].ready = true;
         }
         else
         {
-            atomic_store((_Atomic(void **))&info->goto_address, smp_entry);
+            __atomic_store_n(&info->goto_address, smp_entry, __ATOMIC_SEQ_CST);
             while (atomic_load(&started_cpus) < (i + 1))
                 __asm__ volatile("pause");
         }
     }
 
-    while (atomic_load(&started_cpus) < cpu_count)
-        __asm__ volatile("pause");
+    bool all_ready = false;
+    while (!all_ready)
+    {
+        all_ready = true;
+        for (uint32_t i = 0; i < cpu_count; i++)
+        {
+            if (!cpu_locals[i].ready)
+            {
+                all_ready = false;
+                __asm__ volatile("pause");
+                break;
+            }
+        }
+    }
+
+    log_early("All CPUs are ready");
 }
