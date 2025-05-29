@@ -18,6 +18,7 @@
 #include <flanterm/backends/fb.h>
 #endif // FLANTERM_SUPPORT
 #include <arch/smp.h>
+#include <sys/acpi.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -165,6 +166,14 @@ void emk_entry(void)
 
     *c = 32;
     kfree(c);
+
+    /* Setup ACPI (and TODO APIC) */
+    rsdp_response = rsdp_request.response;
+    if (!rsdp_response)
+    {
+        kpanic(NULL, "Failed to get RSDP request");
+    }
+    acpi_init();
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
