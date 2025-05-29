@@ -19,6 +19,7 @@
 #endif // FLANTERM_SUPPORT
 #include <arch/smp.h>
 #include <sys/acpi.h>
+#include <sys/acpi/madt.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -167,7 +168,7 @@ void emk_entry(void)
     *c = 32;
     kfree(c);
 
-    /* Setup ACPI (and TODO APIC) */
+    /* Setup ACPI */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
     {
@@ -175,10 +176,16 @@ void emk_entry(void)
     }
     acpi_init();
 
+    /* Disable legacy PIC to prepare for APIC */
+    outb(0x21, 0xff);
+    outb(0xA1, 0xff);
+
+    /* Setup APIC */
+    madt_init();
+
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
-    uint32_t uptime = 0;
-    log_early("Finished initializing EMK v1.0, took %d seconds", uptime); /* Still not usermode, so keep using log_early */
+    log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not usermode, so keep using log_early */
 
     hlt();
 }

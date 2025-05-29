@@ -23,7 +23,8 @@
         "string_view": "c",
         "lapic.h": "c",
         "spinlock.h": "c",
-        "fb.h": "c"
+        "fb.h": "c",
+        "acpi.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
