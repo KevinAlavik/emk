@@ -166,6 +166,9 @@ void emk_entry(void)
         kpanic(NULL, "Failed to get MP request");
     }
 
+    mp_response = mp_request.response;
+    smp_init();
+
     /* Setup ACPI */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -175,8 +178,12 @@ void emk_entry(void)
     acpi_init();
     madt_init(); // Also init MADT, to prepare for APIC
 
-    mp_response = mp_request.response;
-    smp_init();
+    /* Disable legacy PIC to prepare for APIC */
+    outb(0x21, 0xff);
+    outb(0xA1, 0xff);
+
+    /* Setup APIC */
+    lapic_init();
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);

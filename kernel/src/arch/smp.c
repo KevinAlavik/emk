@@ -78,14 +78,6 @@ void smp_init(void)
         {
             set_cpu_local(&cpu_locals[i]);
             log_early("CPU %u is the bootstrap processor", i);
-
-            /* Disable legacy PIC to prepare for APIC */
-            outb(0x21, 0xff);
-            outb(0xA1, 0xff);
-
-            /* Setup APIC */
-            lapic_init();
-
             atomic_fetch_add(&started_cpus, 1);
             cpu_locals[i].ready = true;
         }
@@ -97,6 +89,7 @@ void smp_init(void)
         }
     }
 
+    /* trick to wait for all procs to be ready */
     bool all_ready = false;
     while (!all_ready)
     {
