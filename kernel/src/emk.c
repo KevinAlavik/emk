@@ -100,15 +100,6 @@ void emk_entry(void)
     gdt_init();
     idt_init();
 
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    mp_response = mp_request.response;
-    smp_init();
-
     /* Setup physical memory*/
     if (!hhdm_request.response)
     {
@@ -169,6 +160,15 @@ void emk_entry(void)
     *c = 32;
     kfree(c);
 
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
+
     /* Setup ACPI */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -176,13 +176,13 @@ void emk_entry(void)
         kpanic(NULL, "Failed to get RSDP request");
     }
     acpi_init();
+    madt_init(); // Also init MADT, to prepare for APIC
 
     /* Disable legacy PIC to prepare for APIC */
     outb(0x21, 0xff);
     outb(0xA1, 0xff);
 
     /* Setup APIC */
-    madt_init();
     lapic_init();
 
     /* Finished */

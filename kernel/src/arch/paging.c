@@ -238,7 +238,7 @@ void paging_init(void)
         vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
     }
 
-    /* Map physical memory  */
+    /* Map physical memory */
     for (uint64_t i = 0; i < memmap->entry_count; i++)
     {
         if (!memmap->entries[i]->base || !memmap->entries[i]->length)
