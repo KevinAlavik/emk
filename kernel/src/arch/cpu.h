@@ -3,6 +3,7 @@
 #define CPU_H
 
 #include <stdnoreturn.h>
+#include <stdint.h>
 
 static inline noreturn void hlt()
 {

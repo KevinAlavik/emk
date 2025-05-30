@@ -20,6 +20,7 @@
 #include <arch/smp.h>
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
+#include <sys/apic/lapic.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -182,6 +183,7 @@ void emk_entry(void)
 
     /* Setup APIC */
     madt_init();
+    lapic_init();
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
