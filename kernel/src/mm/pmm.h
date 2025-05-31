@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #define PAGE_SIZE 0x1000
+#define PAGE_SIZE_2M (2 * 1024 * 1024)
 
 void pmm_init();
 void *palloc(size_t pages, bool higher_half);

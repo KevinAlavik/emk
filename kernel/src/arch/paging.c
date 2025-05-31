@@ -148,6 +148,45 @@ int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
     return 0;
 }
 
+/* Map virtual to physical address (large), only use during paging init */
+bool _supports_large_pages()
+{
+    uint32_t eax, ebx, ecx, edx;
+    __asm__ volatile("cpuid"
+                     : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+                     : "a"(1));
+    return (edx & (1 << 3)); // PSE (bit 3) = 2M page support
+}
+
+int vmap_large(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
+{
+    if (!pagemap || (virt & (PAGE_SIZE_2M - 1)) || (phys & (PAGE_SIZE_2M - 1)))
+        return -1;
+
+    if (!_supports_large_pages())
+    {
+        log_early("error: vmap_large() is unsupported: 2MB pages not supported!");
+        return -1;
+    }
+
+    uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
+    uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
+    uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
+
+    uint64_t *pml3 = get_or_alloc_table(pagemap, pml4_idx, flags);
+    if (!pml3)
+        return -1;
+
+    uint64_t *pml2 = get_or_alloc_table(pml3, pml3_idx, flags);
+    if (!pml2)
+        return -1;
+
+    // Set large page (PS bit = 1 << 7)
+    pml2[pml2_idx] = phys | flags | (1ULL << 7);
+    __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
+    return 0;
+}
+
 /* Unmap virtual address */
 int vunmap(uint64_t *pagemap, uint64_t virt)
 {
@@ -238,24 +277,42 @@ void paging_init(void)
         vmap(kernel_pagemap, addr, phys, VMM_PRESENT | VMM_WRITE | VMM_NX);
     }
 
-    /* Map physical memory */
+    /* Map HHDM */
+    for (uint64_t gb4 = 0; gb4 < 0x100000000; gb4 += PAGE_SIZE)
+    {
+        vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(gb4), gb4, VMM_PRESENT | VMM_WRITE);
+    }
+
+    /* Map physical memory with large pages when possible */
     for (uint64_t i = 0; i < memmap->entry_count; i++)
     {
         if (!memmap->entries[i]->base || !memmap->entries[i]->length)
         {
             continue;
         }
+
         uint64_t base = ALIGN_DOWN(memmap->entries[i]->base, PAGE_SIZE);
         uint64_t end = ALIGN_UP(memmap->entries[i]->base + memmap->entries[i]->length, PAGE_SIZE);
-        for (uint64_t addr = base; addr < end; addr += PAGE_SIZE)
-        {
-            vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(addr), addr, VMM_PRESENT | VMM_WRITE | VMM_NX);
-        }
-    }
 
-    for (uint64_t gb4 = 0; gb4 < 0x100000000; gb4 += PAGE_SIZE)
-    {
-        vmap(kernel_pagemap, (uint64_t)HIGHER_HALF(gb4), gb4, VMM_PRESENT | VMM_WRITE);
+        for (uint64_t addr = base; addr < end;)
+        {
+            uint64_t virt = (uint64_t)HIGHER_HALF(addr);
+
+            // Try to map a 2MB page if both physical and virtual addresses are aligned
+            if (((addr & (PAGE_SIZE_2M - 1)) == 0) && ((virt & (PAGE_SIZE_2M - 1)) == 0) &&
+                (end - addr) >= PAGE_SIZE_2M)
+            {
+                if (vmap_large(kernel_pagemap, virt, addr, VMM_PRESENT | VMM_WRITE | VMM_NX) == 0)
+                {
+                    addr += PAGE_SIZE_2M;
+                    continue;
+                }
+            }
+
+            // Fallback to normal 4KB page
+            vmap(kernel_pagemap, virt, addr, VMM_PRESENT | VMM_WRITE | VMM_NX);
+            addr += PAGE_SIZE;
+        }
     }
 
     pmset(kernel_pagemap);
