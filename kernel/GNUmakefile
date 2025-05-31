@@ -36,7 +36,7 @@ ifeq ($(BUILD_MODE),release)
               -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone \
               -mcmodel=kernel -fno-unwind-tables -fno-asynchronous-unwind-tables \
               -s -Wno-unused-variable -DBUILD_MODE=\"release\"
-    NASMFLAGS :=
+    NASMFLAGS := -f elf64 -F dwarf -g
     LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections \
                -T linker.ld -Wl,-m,elf_x86_64 -Wl,--strip-all
 else
@@ -45,7 +45,7 @@ else
               -ffunction-sections -fdata-sections -m64 -march=x86-64 \
               -mno-80387 -mno-mmx -mno-sse -mno-sse2 -mno-red-zone \
               -mcmodel=kernel -Wno-unused-variable -DBUILD_MODE=\"dev\"
-    NASMFLAGS := -F dwarf -g
+    NASMFLAGS := -f elf64 -F dwarf -g
     LDFLAGS := -nostdlib -static -z max-page-size=0x1000 -Wl,--gc-sections \
                -T linker.ld -Wl,-m,elf_x86_64
 endif

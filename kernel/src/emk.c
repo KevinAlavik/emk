@@ -43,6 +43,12 @@ __attribute__((used, section(".limine_requests"))) static volatile struct limine
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_mp_request mp_request = {
     .revision = 0,
     .id = LIMINE_MP_REQUEST};
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_bootloader_info_request binfo_request = {
+    .revision = 0,
+    .id = LIMINE_BOOTLOADER_INFO_REQUEST};
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_firmware_type_request firmware_request = {
+    .revision = 0,
+    .id = LIMINE_FIRMWARE_TYPE_REQUEST};
 __attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
 
@@ -87,8 +93,18 @@ void emk_entry(void)
         /* Just do nothing */
     }
 
+    if (!binfo_request.response)
+    {
+        kpanic(NULL, "Failed to get bootloader info");
+    }
+
+    if (!firmware_request.response)
+    {
+        kpanic(NULL, "Failed to get firmware type");
+    }
+
     log_early("Experimental Micro Kernel (EMK) 1.0 Copyright (c) 2025 Piraterna");
-    log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no");
+    log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s, bootloader: %s v%s, firmware: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no", binfo_request.response->name, binfo_request.response->version, (firmware_request.response->firmware_type == LIMINE_FIRMWARE_TYPE_UEFI64 || firmware_request.response->firmware_type == LIMINE_FIRMWARE_TYPE_UEFI32) ? "UEFI" : "BIOS");
     log_early("%s", LOG_SEPARATOR);
 
     if (!LIMINE_BASE_REVISION_SUPPORTED)
@@ -160,15 +176,6 @@ void emk_entry(void)
     *c = 32;
     kfree(c);
 
-    /* Setup SMP */
-    if (!mp_request.response)
-    {
-        kpanic(NULL, "Failed to get MP request");
-    }
-
-    mp_response = mp_request.response;
-    smp_init();
-
     /* Setup ACPI */
     rsdp_response = rsdp_request.response;
     if (!rsdp_response)
@@ -182,8 +189,17 @@ void emk_entry(void)
     outb(0x21, 0xff);
     outb(0xA1, 0xff);
 
-    /* Setup APIC */
+    /* Init APIC (LAPIC for now) */
     lapic_init();
+
+    /* Setup SMP */
+    if (!mp_request.response)
+    {
+        kpanic(NULL, "Failed to get MP request");
+    }
+
+    mp_response = mp_request.response;
+    smp_init();
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);

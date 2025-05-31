@@ -1,43 +1,75 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <sys/apic/lapic.h>
 #include <arch/cpu.h>
-#include <sys/acpi/madt.h>
+#include <arch/paging.h>
 #include <util/log.h>
-#include <mm/vmm.h>
 #include <stdatomic.h>
+#include <sys/kpanic.h>
 
 atomic_uintptr_t lapic_msr = 0;
-volatile uint64_t *lapic_base = 0;
+atomic_uintptr_t lapic_base_atomic = 0;
+
+#define LAPIC_BASE ((volatile uint32_t *)atomic_load(&lapic_base_atomic))
 
 void lapic_write(uint32_t offset, uint32_t value)
 {
-    if (!lapic_base)
+    volatile uint32_t *base = LAPIC_BASE;
+    if (!base)
     {
-        log_early("warning: LAPIC not initialized!");
-        return;
+        log_early("error: LAPIC not initialized!");
+        kpanic(NULL, "LAPIC write attempted before initialization");
     }
-
-    volatile uint32_t *reg = (volatile uint32_t *)((uint8_t *)lapic_base + offset);
-    atomic_store((_Atomic uint32_t *)reg, value);
+    base[offset / 4] = value;
 }
 
 uint32_t lapic_read(uint32_t offset)
 {
-    if (!lapic_base)
+    volatile uint32_t *base = LAPIC_BASE;
+    if (!base)
     {
-        log_early("warning: LAPIC not initialized!");
+        log_early("error: LAPIC not initialized!");
         return 0;
     }
-
-    volatile uint32_t *reg = (volatile uint32_t *)((uint8_t *)lapic_base + offset);
-    return atomic_load((_Atomic uint32_t *)reg);
+    return base[offset / 4];
 }
 
-void lapic_init()
+void lapic_init(void)
 {
-    uint64_t msr = rdmsr(LAPIC_BASE);
+    uint64_t msr = rdmsr(LAPIC_BASE_MSR);
+    msr |= (1 << 11); // Set global LAPIC enable bit
+    wrmsr(LAPIC_BASE_MSR, msr);
     atomic_store(&lapic_msr, msr);
-    lapic_base = (volatile uint64_t *)(msr & ~(0xffff));
-    atomic_store(&lapic_addr, (uint64_t)lapic_base);
-    log_early("New LAPIC base: 0x%lx", lapic_base);
+
+    uint64_t phys_addr = msr & ~0xFFFULL;
+    uint64_t virt_addr = (uint64_t)HIGHER_HALF(phys_addr);
+
+    int ret = vmap(pmget(), virt_addr, phys_addr, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    if (ret != 0)
+    {
+        log_early("error: Failed to map LAPIC base 0x%lx to 0x%lx", phys_addr, virt_addr);
+        kpanic(NULL, "LAPIC mapping failed");
+    }
+
+    atomic_store(&lapic_base_atomic, virt_addr);
+    atomic_store(&lapic_addr, virt_addr);
+}
+
+void lapic_enable(void)
+{
+    volatile uint32_t *base = LAPIC_BASE;
+    if (!base)
+    {
+        log_early("warning: lapic_enable called before lapic_init");
+        return;
+    }
+
+    uint32_t svr = lapic_read(LAPIC_SVR);
+    svr |= (1 << 8);            // Enable APIC
+    svr &= ~(1 << 9);           // Disable focus processor checking
+    svr = (svr & ~0xFF) | 0xFF; // Set spurious interrupt vector to 0xFF
+
+    lapic_write(LAPIC_SVR, svr);
+    lapic_write(LAPIC_TPR, 0);
+    uint32_t id = lapic_read(LAPIC_ID) >> 24;
+    log_early("LAPIC enabled and initialized for CPU %u", id);
 }
