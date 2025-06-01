@@ -10,9 +10,9 @@
 #define LAPIC_REG_SIZE 4
 
 atomic_uintptr_t lapic_msr = 0;
-atomic_uintptr_t lapic_base_atomic = 0;
+atomic_uintptr_t lapic_base = 0;
 
-#define LAPIC_BASE ((volatile uint32_t *)atomic_load(&lapic_base_atomic))
+#define LAPIC_BASE ((volatile uint32_t *)atomic_load(&lapic_base))
 
 void lapic_write(uint32_t offset, uint32_t value)
 {
@@ -65,8 +65,13 @@ void lapic_init(void)
         kpanic(NULL, "LAPIC mapping failed");
     }
 
-    atomic_store(&lapic_base_atomic, virt_addr);
+    atomic_store(&lapic_base, virt_addr);
     atomic_store(&lapic_addr, virt_addr);
+}
+
+void lapic_eoi(void)
+{
+    lapic_write(LAPIC_EOI, 0);
 }
 
 void lapic_enable(void)

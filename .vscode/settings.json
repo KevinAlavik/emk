@@ -25,7 +25,9 @@
         "spinlock.h": "c",
         "fb.h": "c",
         "acpi.h": "c",
-        "madt.h": "c"
+        "madt.h": "c",
+        "ioapic.h": "c",
+        "stdatomic.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,

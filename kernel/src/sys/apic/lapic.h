@@ -33,12 +33,12 @@
 // Startup vector address (must be in first 1MB, page-aligned)
 #define AP_BOOT_ADDRESS 0x8000 // Example: 32KB physical address
 
-extern volatile uint32_t *lapic_base;
 extern uint64_t lapic_addr;
 
 uint32_t lapic_read(uint32_t offset);
 void lapic_write(uint32_t offset, uint32_t value);
 void lapic_init(void);
 void lapic_enable(void);
+void lapic_eoi(void);
 
 #endif // LAPIC_H

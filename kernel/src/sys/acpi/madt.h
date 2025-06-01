@@ -95,8 +95,16 @@ typedef struct acpi_madt_lx2apic
 
 extern acpi_madt_ioapic_t *madt_ioapic_list[256];
 extern acpi_madt_ioapic_src_ovr_t *madt_iso_list[256];
+extern acpi_madt_lapic_t *madt_lapic_list[256];
+extern acpi_madt_lapic_nmi_t *madt_lapic_nmi_list[256];
+extern acpi_madt_ioapic_nmi_src_t *madt_ioapic_nmi_list[256];
+extern acpi_madt_lx2apic_t *madt_lx2apic_list[256];
 extern uint32_t madt_ioapic_len;
 extern uint32_t madt_iso_len;
+extern uint32_t madt_lapic_len;
+extern uint32_t madt_lapic_nmi_len;
+extern uint32_t madt_ioapic_nmi_len;
+extern uint32_t madt_lx2apic_len;
 extern uint64_t lapic_addr;
 
 void madt_init();

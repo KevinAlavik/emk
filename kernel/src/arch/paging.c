@@ -112,42 +112,6 @@ uint64_t *pmget(void)
     return (uint64_t *)HIGHER_HALF(cr3);
 }
 
-/* Map virtual to physical address */
-int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
-{
-    if (!pagemap || (virt & (PAGE_SIZE - 1)) || (phys & (PAGE_SIZE - 1)))
-    {
-        return -1;
-    }
-
-    uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
-    uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
-    uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
-    uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
-
-    uint64_t *pml3 = get_or_alloc_table(pagemap, pml4_idx, flags);
-    if (!pml3)
-    {
-        return -1;
-    }
-
-    uint64_t *pml2 = get_or_alloc_table(pml3, pml3_idx, flags);
-    if (!pml2)
-    {
-        return -1;
-    }
-
-    uint64_t *pml1 = get_or_alloc_table(pml2, pml2_idx, flags);
-    if (!pml1)
-    {
-        return -1;
-    }
-
-    pml1[pml1_idx] = phys | flags;
-    __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
-    return 0;
-}
-
 /* Map virtual to physical address (large), only use during paging init */
 bool _supports_large_pages()
 {
@@ -183,6 +147,42 @@ int vmap_large(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
 
     // Set large page (PS bit = 1 << 7)
     pml2[pml2_idx] = phys | flags | (1ULL << 7);
+    __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
+    return 0;
+}
+
+/* Map virtual to physical address */
+int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
+{
+    if (!pagemap)
+    {
+        return -1;
+    }
+
+    uint64_t pml4_idx = page_index(virt, PML4_SHIFT);
+    uint64_t pml3_idx = page_index(virt, PML3_SHIFT);
+    uint64_t pml2_idx = page_index(virt, PML2_SHIFT);
+    uint64_t pml1_idx = page_index(virt, PML1_SHIFT);
+
+    uint64_t *pml3 = get_or_alloc_table(pagemap, pml4_idx, flags);
+    if (!pml3)
+    {
+        return -1;
+    }
+
+    uint64_t *pml2 = get_or_alloc_table(pml3, pml3_idx, flags);
+    if (!pml2)
+    {
+        return -1;
+    }
+
+    uint64_t *pml1 = get_or_alloc_table(pml2, pml2_idx, flags);
+    if (!pml1)
+    {
+        return -1;
+    }
+
+    pml1[pml1_idx] = phys | flags;
     __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
     return 0;
 }

@@ -14,7 +14,7 @@ void *acpi_vtable(uint64_t phys)
     acpi_sdt_header_t *tmp = (acpi_sdt_header_t *)vallocat(kvm_ctx, 1, VALLOC_RW, phys);
     if (!tmp)
     {
-        kpanic(NULL, "Failed to map first page of ACPI table");
+        kpanic(NULL, "Failed to map first page of ACPI table, got virt: %p", tmp);
         return NULL;
     }
 
