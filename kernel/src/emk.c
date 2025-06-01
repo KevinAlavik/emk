@@ -73,11 +73,6 @@ void tick(struct register_ctx *)
     log_early("tick on CPU %d", get_cpu_local()->cpu_index);
 }
 
-void user_func()
-{
-    syscall(69, 69, 420, 420);
-}
-
 void emk_entry(void)
 {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
@@ -218,12 +213,9 @@ void emk_entry(void)
     /* Setup timer */
     pit_init(NULL);
 
-    /* Call our user space function */
-    user_func(); // No good way to run in usermode, yet
-
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
-    log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not usermode, so keep using log_early */
+    log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not running in usermode, so keep using log_early */
 
     __asm__ volatile("sti");
     hlt();
