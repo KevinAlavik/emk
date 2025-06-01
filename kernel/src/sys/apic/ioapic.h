@@ -4,12 +4,15 @@
 
 #include <arch/idt.h>
 
-// I/O APIC Registers
 #define IOAPIC_OFF_IOREGSEL 0x0
 #define IOAPIC_OFF_IOWIN 0x10
+
+#define IOAPIC_IDX_IOAPICID 0x00
 #define IOAPIC_IDX_IOAPICVER 0x01
+#define IOAPIC_IDX_RED_TBL 0x10
 
 void ioapic_init();
-void ioapic_map(int irq, int vec, idt_intr_handler handler);
+void ioapic_map(int irq, int vec, idt_intr_handler handler, uint8_t dest_mode);
+void ioapic_unmask(int irq);
 
 #endif // IOAPIC_H

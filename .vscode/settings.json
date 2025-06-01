@@ -27,7 +27,8 @@
         "acpi.h": "c",
         "madt.h": "c",
         "ioapic.h": "c",
-        "stdatomic.h": "c"
+        "stdatomic.h": "c",
+        "pit.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,

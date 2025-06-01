@@ -14,6 +14,8 @@
 #include <arch/paging.h>
 #include <util/align.h>
 #include <mm/pmm.h>
+#include <arch/gdt.h>
+#include <arch/idt.h>
 
 #define MAX_CPUS 256
 #define MSR_GS_BASE 0xC0000101
@@ -53,6 +55,8 @@ void smp_entry(struct limine_mp_info *smp_info)
     set_cpu_local(cpu);
 
     /* Setup core */
+    gdt_init();
+    idt_init();
     pmset(kernel_pagemap);
     lapic_enable();
 

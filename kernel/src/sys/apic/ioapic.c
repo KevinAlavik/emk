@@ -5,60 +5,159 @@
 #include <stdatomic.h>
 #include <util/log.h>
 #include <arch/paging.h>
-#include <boot/emk.h>
 #include <arch/idt.h>
 #include <arch/smp.h>
+#include <arch/io.h>
+#include <sys/apic/lapic.h>
 
-atomic_uintptr_t ioapic_base = 0;
+static atomic_uintptr_t ioapic_base = 0;
+
+// Helper function to translate IRQ to GSI based on MADT ISO entries
+static uint32_t irq_to_gsi(uint32_t irq)
+{
+    for (uint32_t i = 0; i < madt_iso_len; i++)
+    {
+        struct acpi_madt_ioapic_src_ovr *iso = madt_iso_list[i];
+        if (iso->irq_source == irq)
+        {
+            return iso->gsi;
+        }
+    }
+    // No override; assume IRQ == GSI
+    return irq;
+}
 
 void ioapic_write(uint8_t index, uint32_t value)
 {
     volatile uint32_t *ioapic = (volatile uint32_t *)atomic_load(&ioapic_base);
-    ioapic[IOAPIC_OFF_IOREGSEL / 4] = index; // Write register index to IOREGSEL
-    ioapic[IOAPIC_OFF_IOWIN / 4] = value;    // Write value to IOWIN
+    if (!ioapic)
+    {
+        log_early("error: IOAPIC not initialized");
+        kpanic(NULL, "IOAPIC write before init");
+    }
+    ioapic[IOAPIC_OFF_IOREGSEL / 4] = index;
+    ioapic[IOAPIC_OFF_IOWIN / 4] = value;
 }
 
 uint32_t ioapic_read(uint8_t index)
 {
     volatile uint32_t *ioapic = (volatile uint32_t *)atomic_load(&ioapic_base);
-    ioapic[IOAPIC_OFF_IOREGSEL / 4] = index; // Write register index to IOREGSEL
-    return ioapic[IOAPIC_OFF_IOWIN / 4];     // Read value from IOWIN
+    if (!ioapic)
+    {
+        log_early("error: IOAPIC not initialized");
+        return 0;
+    }
+    ioapic[IOAPIC_OFF_IOREGSEL / 4] = index;
+    return ioapic[IOAPIC_OFF_IOWIN / 4];
 }
 
-void ioapic_map(int irq, int vec, idt_intr_handler handler)
+void ioapic_map(int irq, int vec, idt_intr_handler handler, uint8_t dest_mode)
 {
-    uint32_t redtble_lo = (0 << 16) | /* Unmask the entry */
-                          (0 << 11) | /* Dest mode */
-                          (0 << 8) |  /* Delivery mode */
-                          vec;        /* Interrupt vector*/
-    ioapic_write(2 * irq, redtble_lo);
+    uint32_t gsi = irq_to_gsi(irq);
+    uint32_t max_irqs = ((ioapic_read(IOAPIC_IDX_IOAPICVER) >> 16) & 0xFF) + 1;
+    if (gsi >= max_irqs)
+    {
+        log_early("error: Invalid GSI %u for IRQ %d (max %u)", gsi, irq, max_irqs);
+        kpanic(NULL, "Invalid GSI for IOAPIC");
+    }
+    if (vec < 32 || vec > 255 || vec == LAPIC_SPURIOUS_VECTOR)
+    {
+        log_early("error: Invalid vector 0x%x for IRQ %d (GSI %u)", vec, irq, gsi);
+        kpanic(NULL, "Invalid vector");
+    }
+
+    uint32_t redtble_lo = (1 << 16) |         // Masked by default
+                          (dest_mode << 11) | // 0: Physical, 1: Logical
+                          (0 << 8) |          // Fixed delivery
+                          vec;
     uint32_t redtble_hi = (get_cpu_local()->lapic_id << 24);
-    ioapic_write(2 * irq + 1, redtble_hi);
-    idt_register_handler(vec, handler);
+    ioapic_write(0x10 + 2 * gsi, redtble_lo);
+    ioapic_write(0x10 + 2 * gsi + 1, redtble_hi);
+
+    if (handler)
+    {
+        idt_register_handler(vec, handler);
+    }
+    log_early("Mapped IRQ %d (GSI %u) to vector 0x%x on CPU %u", irq, gsi, vec, get_cpu_local()->lapic_id);
 }
 
-void ioapic_init()
+void ioapic_unmask(int irq)
+{
+    uint32_t gsi = irq_to_gsi(irq);
+    uint32_t max_irqs = ((ioapic_read(IOAPIC_IDX_IOAPICVER) >> 16) & 0xFF) + 1;
+    if (gsi >= max_irqs)
+    {
+        log_early("error: Invalid GSI %u for IRQ %d (max %u)", gsi, irq, max_irqs);
+        return;
+    }
+    uint32_t redtble_lo = ioapic_read(0x10 + 2 * gsi);
+    redtble_lo &= ~(1 << 16);
+    ioapic_write(0x10 + 2 * gsi, redtble_lo);
+    log_early("Unmasked IRQ %d (GSI %u)", irq, gsi);
+}
+
+void ioapic_init(void)
 {
     if (madt_ioapic_len < 1)
     {
-        kpanic(NULL, "No I/O APIC's available");
+        log_early("error: No IOAPIC entries in MADT");
+        kpanic(NULL, "No IOAPIC available");
     }
 
-    /* Set base of I/O APIC */
-    uint64_t base = madt_ioapic_list[0]->ioapic_addr;
-    log_early("I/O APIC phys addr: 0x%lx", base);
-    uint64_t virt_addr = (uint64_t)HIGHER_HALF(base);
-
-    int ret = vmap(pmget(), virt_addr, base, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    uint64_t phys_addr = madt_ioapic_list[0]->ioapic_addr;
+    if (phys_addr & 0xFFF)
+    {
+        log_early("error: IOAPIC base 0x%lx not page-aligned", phys_addr);
+        kpanic(NULL, "Invalid IOAPIC alignment");
+    }
+    uint64_t virt_addr = (uint64_t)HIGHER_HALF(phys_addr);
+    int ret = vmap(pmget(), virt_addr, phys_addr, VMM_PRESENT | VMM_WRITE | VMM_NX);
     if (ret != 0)
     {
-        log_early("error: Failed to map I/O APIC base 0x%lx to 0x%lx", base, virt_addr);
-        kpanic(NULL, "I/O APIC mapping failed");
+        log_early("error: Failed to map IOAPIC 0x%lx to 0x%lx (%d)", phys_addr, virt_addr, ret);
+        kpanic(NULL, "IOAPIC mapping failed");
     }
     atomic_store(&ioapic_base, virt_addr);
 
-    // Read IOAPICVER register to get the maximum redirection entry
     uint32_t ioapic_ver = ioapic_read(IOAPIC_IDX_IOAPICVER);
     uint32_t max_irqs = ((ioapic_ver >> 16) & 0xFF) + 1;
-    log_early("I/O APIC supports %u IRQs", max_irqs);
+
+    // Initialize all GSIs, respecting ISO overrides
+    for (uint32_t gsi = 0; gsi < max_irqs; gsi++)
+    {
+        uint32_t vec = 32 + gsi;
+        if (vec == LAPIC_SPURIOUS_VECTOR)
+        {
+            vec++;
+        }
+        // Check if this GSI is overridden
+        int is_overridden = 0;
+        uint32_t irq = gsi; // Default: GSI == IRQ
+        for (uint32_t i = 0; i < madt_iso_len; i++)
+        {
+            if (madt_iso_list[i]->gsi == gsi)
+            {
+                is_overridden = 1;
+                irq = madt_iso_list[i]->irq_source;
+                break;
+            }
+        }
+        uint32_t redtble_lo = (1 << 16) | // Masked by default
+                              (0 << 11) | // Physical mode
+                              (0 << 8) |  // Fixed delivery
+                              vec;
+        uint32_t redtble_hi = (get_cpu_local()->lapic_id << 24);
+        ioapic_write(0x10 + 2 * gsi, redtble_lo);
+        ioapic_write(0x10 + 2 * gsi + 1, redtble_hi);
+        if (is_overridden)
+        {
+            log_early("Initialized IRQ %u (GSI %u) to vector 0x%x", irq, gsi, vec);
+        }
+        else
+        {
+            log_early("Initialized GSI %u to vector 0x%x", gsi, vec);
+        }
+    }
+
+    log_early("IOAPIC init at 0x%lx (virt 0x%lx) with %u IRQs", phys_addr, virt_addr, max_irqs);
 }

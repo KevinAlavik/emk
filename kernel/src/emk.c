@@ -22,6 +22,7 @@
 #include <sys/acpi/madt.h>
 #include <sys/apic/lapic.h>
 #include <sys/apic/ioapic.h>
+#include <dev/pit.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -65,6 +66,11 @@ struct limine_mp_response *mp_response = NULL;
 #if FLANTERM_SUPPORT
 struct flanterm_context *ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
+
+void tick(struct register_ctx *)
+{
+    log_early("tick");
+}
 
 void emk_entry(void)
 {
@@ -187,11 +193,8 @@ void emk_entry(void)
     madt_init(); // Also init MADT, to prepare for APIC
 
     /* Disable legacy PIC to prepare for APIC */
-    outb(0x21, 0xff);
-    outb(0xA1, 0xff);
-
-    /* Setup LAPIC */
-    lapic_init();
+    outb(0x21, 0xFF);
+    outb(0xA1, 0xFF);
 
     /* Setup SMP */
     if (!mp_request.response)
@@ -200,14 +203,17 @@ void emk_entry(void)
     }
 
     mp_response = mp_request.response;
+    lapic_init();
     smp_init();
 
     /* Setup IOAPIC */
     ioapic_init();
 
+    /* Setup timer */
+    pit_init(tick);
+
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
     log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not usermode, so keep using log_early */
-
     hlt();
 }
