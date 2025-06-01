@@ -69,6 +69,12 @@ ifeq ($(CONFIG_ENABLE_FLANTERM),y)
     CFLAGS += -I../external/flanterm/ -DFLANTERM_SUPPORT=1
 endif
 
+ifeq ($(CONFIG_LARGE_PAGES),y)
+    CFLAGS += -DLARGE_PAGES=1
+else
+    CFLAGS += -DLARGE_PAGES=0
+endif
+
 EXCLUDE_SRCS := \
     src/mm/heap/ff.c \
     ../external/flanterm/flanterm.c \

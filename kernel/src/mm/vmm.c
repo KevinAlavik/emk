@@ -135,7 +135,6 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
 
                 vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
             }
-            memset((void *)new->start, PAGE_SIZE * pages, 0);
             return (void *)new->start;
         }
         region = region->next;
@@ -161,7 +160,6 @@ void *vallocat(vctx_t *ctx, size_t pages, uint64_t flags, uint64_t phys)
 
         vmap(ctx->pagemap, new->start + (i * PAGE_SIZE), page, new->flags);
     }
-    memset((void *)new->start, PAGE_SIZE * pages, 0);
     return (void *)new->start;
 }
 

@@ -112,7 +112,8 @@ uint64_t *pmget(void)
     return (uint64_t *)HIGHER_HALF(cr3);
 }
 
-/* Map virtual to physical address (large), only use during paging init */
+/* Map virtual to physical address (large 2M pages) */
+#if LARGE_PAGES
 bool _supports_large_pages()
 {
     uint32_t eax, ebx, ecx, edx;
@@ -150,6 +151,18 @@ int vmap_large(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)
     __asm__ volatile("invlpg (%0)" ::"r"(virt) : "memory");
     return 0;
 }
+#else  // LARGE_PAGES
+bool _supports_large_pages()
+{
+    log_early("warning: Large pages are disabled in the kernel");
+    return false;
+}
+
+int vmap_large(uint64_t *, uint64_t, uint64_t, uint64_t)
+{
+    return -1;
+}
+#endif // LARGE_PAGES
 
 /* Map virtual to physical address */
 int vmap(uint64_t *pagemap, uint64_t virt, uint64_t phys, uint64_t flags)

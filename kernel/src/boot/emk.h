@@ -35,6 +35,10 @@ extern struct limine_mp_response *mp_response;
 extern struct flanterm_context *ft_ctx;
 #endif // FLANTERM_SUPPORT
 
+#ifndef LARGE_PAGES
+#define LARGE_PAGES 0
+#endif // LARGE_PAGES
+
 #define LOG_SEPARATOR "----------------------------------------"
 
 #endif // EMK_H

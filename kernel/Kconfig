@@ -5,15 +5,15 @@ menu "Build"
         prompt "Build Mode"
         default BUILD_MODE_DEBUG
 
-    config BUILD_MODE_DEBUG
-        bool "Debug"
-        help
-          Build with debug symbols and no optimizations.
+        config BUILD_MODE_DEBUG
+            bool "Debug"
+            help
+              Build with debug symbols and no optimizations.
 
-    config BUILD_MODE_RELEASE
-        bool "Release"
-        help
-          Build with optimizations and no debug symbols.
+        config BUILD_MODE_RELEASE
+            bool "Release"
+            help
+              Build with optimizations and no debug symbols.
 
     endchoice
 endmenu
@@ -23,10 +23,10 @@ menu "Memory"
         prompt "Kernel Heap Algorithm"
         default KERNEL_HEAP_FF
 
-    config KERNEL_HEAP_FF
-        bool "First-Fit"
-        help
-          Use the First-Fit memory allocation algorithm (ff.c).
+        config KERNEL_HEAP_FF
+            bool "First-Fit"
+            help
+              Use the First-Fit memory allocation algorithm (ff.c).
 
     endchoice
 
@@ -51,4 +51,13 @@ menu "Extras"
         bool "Enable Flanterm Support"
         help
           Includes support for the Flanterm terminal emulator. Useful for debugging real hardware.
+endmenu
+
+menu "Experimental"
+    comment "These features are experimental and might break the kernel. Don't expect stability."
+
+    config LARGE_PAGES
+        bool "Enable 2M Pages"
+        help
+          Adds support for vmap_large()
 endmenu
