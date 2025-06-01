@@ -40,33 +40,44 @@ void idt_default_interrupt_handler(struct register_ctx *ctx)
     kpanic(ctx, NULL);
 }
 
-#define SET_GATE(interrupt, base, flags)                                    \
-    do                                                                      \
-    {                                                                       \
-        idt_descriptor[(interrupt)].off_low = (base) & 0xFFFF;              \
-        idt_descriptor[(interrupt)].sel = 0x8;                              \
-        idt_descriptor[(interrupt)].ist = 0;                                \
-        idt_descriptor[(interrupt)].attr = (flags);                         \
-        idt_descriptor[(interrupt)].off_mid = ((base) >> 16) & 0xFFFF;      \
-        idt_descriptor[(interrupt)].off_high = ((base) >> 32) & 0xFFFFFFFF; \
-        idt_descriptor[(interrupt)].zero = 0;                               \
-    } while (0)
+/* pesky little trap which just halts the current cpu and lets it die alone */
+void die(struct register_ctx *)
+{
+    /* If the CPU has caught this its game over */
+    cpu_local_t *cpu = get_cpu_local();
+    cpu->ready = false;
+    hcf();
+}
+
+void idt_set_gate(uint8_t interrupt, uint64_t base, uint8_t flags)
+{
+    idt_descriptor[(interrupt)].off_low = (base) & 0xFFFF;
+    idt_descriptor[(interrupt)].sel = 0x8;
+    idt_descriptor[(interrupt)].ist = 0;
+    idt_descriptor[(interrupt)].attr = (flags);
+    idt_descriptor[(interrupt)].off_mid = ((base) >> 16) & 0xFFFF;
+    idt_descriptor[(interrupt)].off_high = ((base) >> 32) & 0xFFFFFFFF;
+    idt_descriptor[(interrupt)].zero = 0;
+}
 
 void idt_init()
 {
     for (int i = 0; i < 32; i++)
     {
-        SET_GATE(i, stubs[i], IDT_TRAP_GATE);
+        idt_set_gate(i, stubs[i], IDT_TRAP_GATE);
         real_handlers[i] = idt_default_interrupt_handler;
     }
 
     for (int i = 32; i < 256; i++)
     {
-        SET_GATE(i, stubs[i], IDT_INTERRUPT_GATE);
+        idt_set_gate(i, stubs[i], IDT_INTERRUPT_GATE);
     }
 
-    SET_GATE(0x80, stubs[0x80], IDT_INTERRUPT_GATE | GDT_ACCESS_RING3);
+    idt_set_gate(0x80, stubs[0x80], IDT_INTERRUPT_GATE | GDT_ACCESS_RING3);
     real_handlers[0x80] = syscall_handler;
+
+    idt_set_gate(0xFE, stubs[0xFE], IDT_TRAP_GATE);
+    real_handlers[0xFE] = die;
 
     __asm__ volatile(
         "lidt %0"

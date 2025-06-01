@@ -46,6 +46,23 @@ uint32_t lapic_read(uint32_t offset)
     return base[offset / LAPIC_REG_SIZE];
 }
 
+uint32_t lapic_get_id(void)
+{
+    volatile uint32_t *base = LAPIC_BASE;
+    if (!base)
+    {
+        log_early("error: LAPIC not initialized for ID read");
+        kpanic(NULL, "LAPIC get_id before init");
+    }
+    uint32_t id = lapic_read(LAPIC_ID) >> 24;
+    if (id > 255)
+    {
+        log_early("error: Invalid LAPIC ID %u", id);
+        kpanic(NULL, "Invalid LAPIC ID");
+    }
+    return id;
+}
+
 void lapic_init(void)
 {
     uint64_t msr = rdmsr(LAPIC_BASE_MSR);
@@ -72,18 +89,7 @@ void lapic_init(void)
     }
     atomic_store(&lapic_base, virt_addr);
 
-    uint32_t id = lapic_read(LAPIC_ID) >> 24;
-    if (id > 255)
-    {
-        log_early("error: Invalid LAPIC ID %u", id);
-        kpanic(NULL, "Invalid LAPIC ID");
-    }
-    log_early("LAPIC init: CPU %u at 0x%lx (virt 0x%lx)", id, phys_addr, virt_addr);
-    lapic_write(LAPIC_EOI, 0);
-}
-
-void lapic_eoi(void)
-{
+    uint32_t id = lapic_get_id(); // Use the new function
     lapic_write(LAPIC_EOI, 0);
 }
 
@@ -118,7 +124,55 @@ void lapic_enable(void)
     lapic_write(LAPIC_LVT_LINT1, lvt1);
 
     lapic_write(LAPIC_TPR, 0);
+}
 
-    uint32_t id = lapic_read(LAPIC_ID) >> 24;
-    log_early("LAPIC enabled: CPU %u, spurious vector 0x%x", id, LAPIC_SPURIOUS_VECTOR);
+void lapic_eoi(void)
+{
+    lapic_write(LAPIC_EOI, 0);
+}
+
+void lapic_send_ipi(uint32_t apic_id, uint32_t vector, uint32_t delivery_mode, uint32_t dest_mode, uint32_t shorthand)
+{
+    volatile uint32_t *base = LAPIC_BASE;
+    if (!base)
+    {
+        log_early("error: LAPIC not initialized for IPI");
+        kpanic(NULL, "LAPIC IPI before init");
+    }
+
+    if (vector > 255 && delivery_mode != ICR_INIT && delivery_mode != ICR_STARTUP)
+    {
+        log_early("error: Invalid vector 0x%x for IPI", vector);
+        kpanic(NULL, "Invalid IPI vector");
+    }
+    if (apic_id > 255 && shorthand == ICR_NO_SHORTHAND)
+    {
+        log_early("error: Invalid APIC ID %u for IPI", apic_id);
+        kpanic(NULL, "Invalid APIC ID");
+    }
+
+    while (lapic_read(LAPIC_ICRLO) & ICR_SEND_PENDING)
+    {
+        __asm__ volatile("pause");
+    }
+
+    if (shorthand == ICR_NO_SHORTHAND)
+    {
+        lapic_write(LAPIC_ICRHI, apic_id << ICR_DESTINATION_SHIFT);
+    }
+    else
+    {
+        lapic_write(LAPIC_ICRHI, 0);
+    }
+
+    uint32_t icr_lo = vector | delivery_mode | dest_mode | ICR_ASSERT | ICR_EDGE | shorthand;
+    lapic_write(LAPIC_ICRLO, icr_lo);
+
+    if (delivery_mode != ICR_INIT && delivery_mode != ICR_STARTUP)
+    {
+        while (lapic_read(LAPIC_ICRLO) & ICR_SEND_PENDING)
+        {
+            __asm__ volatile("pause");
+        }
+    }
 }

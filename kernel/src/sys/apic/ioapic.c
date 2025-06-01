@@ -51,7 +51,7 @@ uint32_t ioapic_read(uint8_t index)
     return ioapic[IOAPIC_OFF_IOWIN / 4];
 }
 
-void ioapic_map(int irq, int vec, uint8_t dest_mode)
+void ioapic_map(int irq, int vec, uint8_t dest_mode, uint8_t lapic_id)
 {
     uint32_t gsi = irq_to_gsi(irq);
     uint32_t max_irqs = ((ioapic_read(IOAPIC_IDX_IOAPICVER) >> 16) & 0xFF) + 1;
@@ -70,11 +70,9 @@ void ioapic_map(int irq, int vec, uint8_t dest_mode)
                           (dest_mode << 11) | // 0: Physical, 1: Logical
                           (0 << 8) |          // Fixed delivery
                           vec;
-    uint32_t redtble_hi = (get_cpu_local()->lapic_id << 24);
+    uint32_t redtble_hi = (lapic_id << 24);
     ioapic_write(0x10 + 2 * gsi, redtble_lo);
     ioapic_write(0x10 + 2 * gsi + 1, redtble_hi);
-
-    log_early("Mapped IRQ %d (GSI %u) to vector 0x%x on CPU %u", irq, gsi, vec, get_cpu_local()->lapic_id);
 }
 
 void ioapic_unmask(int irq)
@@ -89,7 +87,6 @@ void ioapic_unmask(int irq)
     uint32_t redtble_lo = ioapic_read(0x10 + 2 * gsi);
     redtble_lo &= ~(1 << 16);
     ioapic_write(0x10 + 2 * gsi, redtble_lo);
-    log_early("Unmasked IRQ %d (GSI %u)", irq, gsi);
 }
 
 void ioapic_init(void)
@@ -154,6 +151,4 @@ void ioapic_init(void)
             log_early("Initialized GSI %u to vector 0x%x", gsi, vec);
         }
     }
-
-    log_early("IOAPIC init at 0x%lx (virt 0x%lx) with %u IRQs", phys_addr, virt_addr, max_irqs);
 }

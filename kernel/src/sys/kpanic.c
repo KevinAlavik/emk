@@ -6,6 +6,8 @@
 #include <lib/string.h>
 #include <arch/cpu.h>
 #include <arch/smp.h>
+#include <sys/apic/lapic.h>
+#include <arch/idt.h>
 
 static const char *strings[32] = {
     "Division by Zero",
@@ -41,6 +43,7 @@ static const char *strings[32] = {
     "Security Exception",
     "RESERVED VECTOR"};
 
+/* TODO: Move to arch/ since its arch-specific */
 static void capture_regs(struct register_ctx *context)
 {
     __asm__ volatile(
@@ -93,6 +96,22 @@ static void capture_regs(struct register_ctx *context)
 
 void kpanic(struct register_ctx *ctx, const char *fmt, ...)
 {
+    /* Halt all other CPU's using our custom die trap at 0xFE/254 */
+    lapic_send_ipi(0, 0xFE, ICR_FIXED, ICR_PHYSICAL, ICR_ALL_EXCLUDING_SELF);
+
+    /* Wait until all CPU's except the one that panicked is halted */
+    for (uint32_t i = 0; i < cpu_count; i++)
+    {
+        cpu_local_t *cur = &cpu_locals[i];
+        if (cur->cpu_index != get_cpu_local()->cpu_index)
+        {
+            while (cur->ready)
+            {
+                __asm__ volatile("pause");
+            }
+        }
+    }
+
     struct register_ctx regs;
 
     if (ctx == NULL)

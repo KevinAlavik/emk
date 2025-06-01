@@ -33,5 +33,6 @@ typedef void (*idt_intr_handler)(struct register_ctx *ctx);
 void idt_init();
 int idt_register_handler(size_t vector, idt_intr_handler handler);
 void idt_default_interrupt_handler(struct register_ctx *ctx);
+void idt_set_gate(uint8_t interrupt, uint64_t base, uint8_t flags);
 
 #endif // IDT_H

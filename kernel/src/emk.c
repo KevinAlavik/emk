@@ -211,7 +211,7 @@ void emk_entry(void)
     ioapic_init();
 
     /* Setup timer */
-    pit_init(NULL);
+    pit_init(tick);
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);

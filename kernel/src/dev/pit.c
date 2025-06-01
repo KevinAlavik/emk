@@ -4,6 +4,7 @@
 #include <sys/apic/lapic.h>
 #include <sys/apic/ioapic.h>
 #include <util/log.h>
+#include <arch/smp.h>
 
 #define PIT_VECTOR 32
 
@@ -28,6 +29,6 @@ void pit_init(idt_intr_handler handler)
     outb(0x40, (divisor >> 8) & 0xFF);
 
     idt_register_handler(PIT_VECTOR, pit_handler);
-    ioapic_map(0, PIT_VECTOR, 0);
+    ioapic_map(0, PIT_VECTOR, 0, get_cpu_local()->lapic_id);
     ioapic_unmask(0);
 }

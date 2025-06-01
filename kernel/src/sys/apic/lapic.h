@@ -23,12 +23,19 @@
 
 // ICR Fields
 #define ICR_FIXED 0x00000000
+#define ICR_OTHER 0x00000003
 #define ICR_INIT 0x00000500
 #define ICR_STARTUP 0x00000600
 #define ICR_PHYSICAL 0x00000000
+#define ICR_LOGICAL 0x00000800
 #define ICR_ASSERT 0x00004000
+#define ICR_DEASSERT 0x00000000
 #define ICR_EDGE 0x00000000
+#define ICR_LEVEL 0x00008000
 #define ICR_NO_SHORTHAND 0x00000000
+#define ICR_SELF 0x00040000
+#define ICR_ALL_INCLUDING_SELF 0x00080000
+#define ICR_ALL_EXCLUDING_SELF 0x000C0000
 #define ICR_SEND_PENDING 0x00001000
 #define ICR_DESTINATION_SHIFT 24
 
@@ -41,5 +48,7 @@ void lapic_write(uint32_t offset, uint32_t value);
 void lapic_init(void);
 void lapic_enable(void);
 void lapic_eoi(void);
+void lapic_send_ipi(uint32_t apic_id, uint32_t vector, uint32_t delivery_mode, uint32_t dest_mode, uint32_t shorthand);
+uint32_t lapic_get_id(void);
 
 #endif // LAPIC_H

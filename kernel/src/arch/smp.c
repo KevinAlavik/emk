@@ -17,17 +17,31 @@
 #include <arch/gdt.h>
 #include <arch/idt.h>
 
-#define MAX_CPUS 256
 #define MSR_GS_BASE 0xC0000101
 
 uint32_t cpu_count = 0;
 uint32_t bootstrap_lapic_id = 0;
 atomic_uint started_cpus = 0;
-static cpu_local_t cpu_locals[MAX_CPUS];
+cpu_local_t cpu_locals[MAX_CPUS] = {0};
 
 cpu_local_t *get_cpu_local(void)
 {
-    return (cpu_local_t *)rdmsr(MSR_GS_BASE);
+
+    cpu_local_t *tmp = (cpu_local_t *)rdmsr(MSR_GS_BASE);
+    if (tmp != NULL)
+        return tmp;
+
+    uint32_t current_lapic_id = lapic_get_id();
+    for (uint32_t i = 0; i < cpu_count; i++)
+    {
+        if (cpu_locals[i].lapic_id == current_lapic_id)
+        {
+            return &cpu_locals[i];
+        }
+    }
+
+    log_early("warning: No CPU found with LAPIC ID %u", current_lapic_id);
+    return NULL;
 }
 
 static inline void set_cpu_local(cpu_local_t *cpu)
@@ -65,6 +79,8 @@ void smp_entry(struct limine_mp_info *smp_info)
     log_early("CPU %d (LAPIC ID %u) is up", cpu->cpu_index, lapic_id);
 
     cpu->ready = true;
+
+    __asm__ volatile("sti");
     hlt();
 }
 

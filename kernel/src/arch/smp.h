@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-extern uint32_t bootstrap_lapic_id;
+#define MAX_CPUS 256
 
 typedef struct
 {
@@ -13,6 +13,10 @@ typedef struct
     uint32_t cpu_index;
     bool ready;
 } cpu_local_t;
+
+extern uint32_t bootstrap_lapic_id;
+extern cpu_local_t cpu_locals[MAX_CPUS];
+extern uint32_t cpu_count;
 
 void smp_init();
 cpu_local_t *get_cpu_local(void);
