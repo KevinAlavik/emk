@@ -15,7 +15,7 @@ all: $(IMAGE_NAME).iso
 .PHONY: run
 run: $(IMAGE_NAME).iso ovmf/ovmf-code-x86_64.fd
 	@qemu-system-x86_64 \
-		-M q35 -monitor stdio -serial file:com1.log \
+		-M q35 -serial stdio \
 		-drive if=pflash,unit=0,format=raw,file=ovmf/ovmf-code-x86_64.fd,readonly=on \
 		-cdrom $(IMAGE_NAME).iso \
 		$(QEMUFLAGS)

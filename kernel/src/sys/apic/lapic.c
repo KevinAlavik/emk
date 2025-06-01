@@ -102,7 +102,21 @@ void lapic_enable(void)
     svr = (svr & ~0xFF) | LAPIC_SPURIOUS_VECTOR;
     lapic_write(LAPIC_SVR, svr);
 
-    lapic_write(LAPIC_LVT_TIMER, (1 << 16));
+    /* Mask Timer */
+    uint32_t timer = lapic_read(LAPIC_LVT_TIMER);
+    timer |= (1 << 16);
+    lapic_write(LAPIC_LVT_TIMER, timer);
+
+    /* Mask LVT0 */
+    uint32_t lvt0 = lapic_read(LAPIC_LVT_LINT0);
+    lvt0 |= (1 << 16);
+    lapic_write(LAPIC_LVT_LINT0, lvt0);
+
+    /* Mask LVT1 */
+    uint32_t lvt1 = lapic_read(LAPIC_LVT_LINT1);
+    lvt1 |= (1 << 16);
+    lapic_write(LAPIC_LVT_LINT1, lvt1);
+
     lapic_write(LAPIC_TPR, 0);
 
     uint32_t id = lapic_read(LAPIC_ID) >> 24;

@@ -51,7 +51,7 @@ uint32_t ioapic_read(uint8_t index)
     return ioapic[IOAPIC_OFF_IOWIN / 4];
 }
 
-void ioapic_map(int irq, int vec, idt_intr_handler handler, uint8_t dest_mode)
+void ioapic_map(int irq, int vec, uint8_t dest_mode)
 {
     uint32_t gsi = irq_to_gsi(irq);
     uint32_t max_irqs = ((ioapic_read(IOAPIC_IDX_IOAPICVER) >> 16) & 0xFF) + 1;
@@ -74,10 +74,6 @@ void ioapic_map(int irq, int vec, idt_intr_handler handler, uint8_t dest_mode)
     ioapic_write(0x10 + 2 * gsi, redtble_lo);
     ioapic_write(0x10 + 2 * gsi + 1, redtble_hi);
 
-    if (handler)
-    {
-        idt_register_handler(vec, handler);
-    }
     log_early("Mapped IRQ %d (GSI %u) to vector 0x%x on CPU %u", irq, gsi, vec, get_cpu_local()->lapic_id);
 }
 

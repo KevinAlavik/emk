@@ -215,5 +215,7 @@ void emk_entry(void)
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
     log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not usermode, so keep using log_early */
+
+    __asm__ volatile("sti");
     hlt();
 }

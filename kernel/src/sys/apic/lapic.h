@@ -17,6 +17,7 @@
 #define LAPIC_ICRHI 0x0310     // Interrupt Command (High)
 #define LAPIC_LVT_TIMER 0x0320 // LVT Timer
 #define LAPIC_LVT_LINT0 0x350  // LINT0
+#define LAPIC_LVT_LINT1 0x360  // LINT1
 #define LAPIC_TICR 0x0380      // Timer Initial Count
 #define LAPIC_TDCR 0x03E0      // Timer Divide Configuration
 

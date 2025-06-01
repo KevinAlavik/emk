@@ -27,6 +27,7 @@ void pit_init(idt_intr_handler handler)
     outb(0x40, divisor & 0xFF);
     outb(0x40, (divisor >> 8) & 0xFF);
 
-    ioapic_map(0, PIT_VECTOR, pit_handler, 0);
+    idt_register_handler(PIT_VECTOR, pit_handler);
+    ioapic_map(0, PIT_VECTOR, 0);
     ioapic_unmask(0);
 }
