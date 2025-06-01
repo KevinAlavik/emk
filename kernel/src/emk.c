@@ -69,7 +69,7 @@ struct flanterm_context *ft_ctx = NULL;
 
 void tick(struct register_ctx *)
 {
-    log_early("tick");
+    log_early("tick on CPU %d", get_cpu_local()->cpu_index);
 }
 
 void emk_entry(void)
