@@ -232,6 +232,9 @@ void paging_init(void)
     }
     memset(kernel_pagemap, 0, PAGE_SIZE);
 
+    if (_supports_large_pages())
+        log_early("Support for 2MB pages is present");
+
     /* Map kernel stack */
     uint64_t stack_top = ALIGN_UP(kstack_top, PAGE_SIZE);
     for (uint64_t addr = stack_top - (16 * 1024); addr < stack_top; addr += PAGE_SIZE)

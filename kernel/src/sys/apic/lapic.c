@@ -6,6 +6,9 @@
 #include <stdatomic.h>
 #include <sys/kpanic.h>
 
+#define LAPIC_REG_ALIGN 16
+#define LAPIC_REG_SIZE 4
+
 atomic_uintptr_t lapic_msr = 0;
 atomic_uintptr_t lapic_base_atomic = 0;
 
@@ -19,7 +22,13 @@ void lapic_write(uint32_t offset, uint32_t value)
         log_early("error: LAPIC not initialized!");
         kpanic(NULL, "LAPIC write attempted before initialization");
     }
-    base[offset / 4] = value;
+    if (offset % LAPIC_REG_ALIGN != 0)
+    {
+        log_early("error: Misaligned LAPIC offset 0x%x", offset);
+        kpanic(NULL, "Invalid LAPIC register offset");
+    }
+    volatile uint32_t *reg = base + (offset / LAPIC_REG_SIZE);
+    *reg = value;
 }
 
 uint32_t lapic_read(uint32_t offset)
@@ -30,7 +39,13 @@ uint32_t lapic_read(uint32_t offset)
         log_early("error: LAPIC not initialized!");
         return 0;
     }
-    return base[offset / 4];
+    if (offset % LAPIC_REG_ALIGN != 0)
+    {
+        log_early("error: Misaligned LAPIC offset 0x%x", offset);
+        kpanic(NULL, "Invalid LAPIC register offset");
+    }
+    volatile uint32_t *reg = base + (offset / LAPIC_REG_SIZE);
+    return *reg;
 }
 
 void lapic_init(void)
