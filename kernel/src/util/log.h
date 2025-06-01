@@ -6,5 +6,6 @@
 
 #define log_early(fmt, ...) kprintf("early: " fmt "\n", ##__VA_ARGS__)
 #define log_panic(fmt, ...) kprintf("panic: " fmt "\n", ##__VA_ARGS__)
+#define log_user(fmt, ...) kprintf("user: " fmt "\n", ##__VA_ARGS__)
 
 #endif // LOG_H

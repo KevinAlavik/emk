@@ -59,6 +59,7 @@ void smp_entry(struct limine_mp_info *smp_info)
     idt_init();
     pmset(kernel_pagemap);
     lapic_enable();
+    tss_init(kstack_top);
 
     atomic_fetch_add(&started_cpus, 1);
     log_early("CPU %d (LAPIC ID %u) is up", cpu->cpu_index, lapic_id);
@@ -74,6 +75,7 @@ void smp_init(void)
     log_early("%u CPUs detected", cpu_count);
 
     lapic_enable();
+    tss_init(kstack_top);
 
     for (uint32_t i = 0; i < cpu_count; i++)
     {

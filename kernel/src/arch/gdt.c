@@ -1,8 +1,11 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <arch/gdt.h>
+#include <util/log.h>
+#include <lib/string.h>
 
-gdt_entry_t gdt[5];
+gdt_entry_t gdt[7];
 gdt_ptr_t gdt_ptr;
+tss_entry_t tss;
 
 void gdt_init()
 {
@@ -16,6 +19,34 @@ void gdt_init()
     gdt_ptr.base = (uint64_t)&gdt;
 
     gdt_flush(gdt_ptr);
+}
+
+void flush_tss(void);
+void tss_init(uint64_t stack)
+{
+    log_early("Initializing TSS with RSP0 = 0x%.16llx", stack);
+
+    memset(&tss, 0, sizeof(tss_entry_t));
+
+    tss.rsp0 = stack;
+    tss.io_map_base = sizeof(tss_entry_t);
+
+    uint64_t base = (uint64_t)&tss;
+    uint32_t limit = sizeof(tss_entry_t) - 1;
+    gdt_system_entry_t tss_entry = {
+        .limit_low = limit & 0xFFFF,
+        .base_low = base & 0xFFFF,
+        .base_middle = (base >> 16) & 0xFF,
+        .access = GDT_TSS,
+        .granularity = (limit >> 16) & 0x0F,
+        .base_high = (base >> 24) & 0xFF,
+        .base_upper = base >> 32,
+        .reserved = 0,
+    };
+    memcpy(&gdt[5], &tss_entry, sizeof(gdt_system_entry_t));
+
+    gdt_flush(gdt_ptr);
+    flush_tss();
 }
 
 void gdt_flush(gdt_ptr_t gdt_ptr)

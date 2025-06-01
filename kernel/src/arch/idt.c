@@ -7,6 +7,8 @@
 #include <sys/kpanic.h>
 #include <arch/smp.h>
 #include <stdbool.h>
+#include <arch/gdt.h>
+#include <sys/syscall.h>
 
 struct idt_entry __attribute__((aligned(16))) idt_descriptor[256] = {0};
 idt_intr_handler real_handlers[256] = {0};
@@ -19,6 +21,19 @@ struct __attribute__((packed)) idt_ptr
 };
 
 struct idt_ptr idt_ptr = {sizeof(idt_descriptor) - 1, (uint64_t)&idt_descriptor};
+
+void syscall_handler(struct register_ctx *ctx)
+{
+    log_user("syscall(%lu, 0x%.16lx, 0x%.16lx, 0x%.16lx, 0x%.16lx) from 0x%.16llx @ CPU %d",
+             ctx->rax,
+             ctx->rdi,
+             ctx->rsi,
+             ctx->rdx,
+             ctx->rcx,
+             ctx->rip, get_cpu_local()->cpu_index);
+    log_user("warning: No systemcall handlers available, dropping syscall...");
+    ctx->rax = -1;
+}
 
 void idt_default_interrupt_handler(struct register_ctx *ctx)
 {
@@ -49,6 +64,9 @@ void idt_init()
     {
         SET_GATE(i, stubs[i], IDT_INTERRUPT_GATE);
     }
+
+    SET_GATE(0x80, stubs[0x80], IDT_INTERRUPT_GATE | GDT_ACCESS_RING3);
+    real_handlers[0x80] = syscall_handler;
 
     __asm__ volatile(
         "lidt %0"

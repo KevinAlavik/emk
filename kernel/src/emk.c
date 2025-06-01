@@ -23,6 +23,7 @@
 #include <sys/apic/lapic.h>
 #include <sys/apic/ioapic.h>
 #include <dev/pit.h>
+#include <sys/syscall.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
@@ -70,6 +71,11 @@ struct flanterm_context *ft_ctx = NULL;
 void tick(struct register_ctx *)
 {
     log_early("tick on CPU %d", get_cpu_local()->cpu_index);
+}
+
+void user_func()
+{
+    syscall(69, 69, 420, 420);
 }
 
 void emk_entry(void)
@@ -210,7 +216,10 @@ void emk_entry(void)
     ioapic_init();
 
     /* Setup timer */
-    pit_init(tick);
+    pit_init(NULL);
+
+    /* Call our user space function */
+    user_func(); // No good way to run in usermode, yet
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
