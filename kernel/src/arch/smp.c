@@ -10,12 +10,21 @@
 #include <mm/heap.h>
 #include <arch/io.h>
 #include <sys/apic/lapic.h>
+#include <sys/apic/ioapic.h>
 #include <sys/acpi/madt.h>
 #include <arch/paging.h>
 #include <util/align.h>
 #include <mm/pmm.h>
 #include <arch/gdt.h>
 #include <arch/idt.h>
+#include <dev/pit.h>
+#include <sys/acpi.h>
+
+void tick(struct register_ctx *)
+{
+    log_early("tick on CPU %d", get_cpu_local()->cpu_index);
+    lapic_eoi();
+}
 
 #define MSR_GS_BASE 0xC0000101
 
@@ -91,6 +100,13 @@ void smp_init(void)
     log_early("%u CPUs detected", cpu_count);
 
     lapic_enable();
+
+    /* Setup IOAPIC */
+    ioapic_init();
+
+    /* Setup timer */
+    pit_init(tick);
+
     tss_init(kstack_top);
 
     for (uint32_t i = 0; i < cpu_count; i++)
