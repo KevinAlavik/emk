@@ -18,7 +18,8 @@ extern uint32_t bootstrap_lapic_id;
 extern cpu_local_t cpu_locals[MAX_CPUS];
 extern uint32_t cpu_count;
 
-void smp_init();
+void smp_early_init(void);
+void smp_init(void);
 cpu_local_t *get_cpu_local(void);
 
 #endif // SMP_H

@@ -20,13 +20,8 @@
 #include <dev/pit.h>
 #include <sys/acpi.h>
 
-void tick(struct register_ctx *)
-{
-    log_early("tick on CPU %d", get_cpu_local()->cpu_index);
-    lapic_eoi();
-}
-
 #define MSR_GS_BASE 0xC0000101
+#define CPU_START_TIMEOUT 1000000
 
 uint32_t cpu_count = 0;
 uint32_t bootstrap_lapic_id = 0;
@@ -35,10 +30,11 @@ cpu_local_t cpu_locals[MAX_CPUS] = {0};
 
 cpu_local_t *get_cpu_local(void)
 {
-
-    cpu_local_t *tmp = (cpu_local_t *)rdmsr(MSR_GS_BASE);
-    if (tmp != NULL)
-        return tmp;
+    cpu_local_t *cpu = (cpu_local_t *)rdmsr(MSR_GS_BASE);
+    if (cpu)
+    {
+        return cpu;
+    }
 
     uint32_t current_lapic_id = lapic_get_id();
     for (uint32_t i = 0; i < cpu_count; i++)
@@ -49,13 +45,23 @@ cpu_local_t *get_cpu_local(void)
         }
     }
 
-    log_early("warning: No CPU found with LAPIC ID %u", current_lapic_id);
+    log_early("Error: No CPU found with LAPIC ID %u", current_lapic_id);
     return NULL;
 }
 
 static inline void set_cpu_local(cpu_local_t *cpu)
 {
     wrmsr(MSR_GS_BASE, (uint64_t)cpu);
+}
+
+static void init_cpu(cpu_local_t *cpu)
+{
+    gdt_init();
+    idt_init();
+    pmset(kernel_pagemap);
+    lapic_enable();
+    tss_init(kstack_top);
+    log_early("CPU %d (LAPIC ID %u) core components initialized", cpu->cpu_index, cpu->lapic_id);
 }
 
 void smp_entry(struct limine_mp_info *smp_info)
@@ -73,78 +79,84 @@ void smp_entry(struct limine_mp_info *smp_info)
     }
 
     if (!cpu)
-        kpanic(NULL, "CPU with LAPIC ID %u not found!", lapic_id);
+    {
+        kpanic(NULL, "CPU with LAPIC ID %u not found", lapic_id);
+    }
 
+    // Initialize CPU
     set_cpu_local(cpu);
+    init_cpu(cpu);
 
-    /* Setup core */
-    gdt_init();
-    idt_init();
-    pmset(kernel_pagemap);
-    lapic_enable();
-    tss_init(kstack_top);
-
-    atomic_fetch_add(&started_cpus, 1);
-    log_early("CPU %d (LAPIC ID %u) is up", cpu->cpu_index, lapic_id);
-
+    // Mark CPU as ready
     cpu->ready = true;
+    atomic_fetch_add(&started_cpus, 1);
+    log_early("CPU %d (LAPIC ID %u) started", cpu->cpu_index, lapic_id);
 
+    // Enable interrupts and halt
     __asm__ volatile("sti");
     hlt();
 }
 
-void smp_init(void)
+void smp_early_init(void)
 {
-    bootstrap_lapic_id = mp_response->bsp_lapic_id;
+    if (!mp_response)
+    {
+        kpanic(NULL, "No MP response from Limine");
+    }
+
     cpu_count = mp_response->cpu_count;
-    log_early("%u CPUs detected", cpu_count);
-
-    lapic_enable();
-
-    /* Setup IOAPIC */
-    ioapic_init();
-
-    /* Setup timer */
-    pit_init(tick);
-
-    tss_init(kstack_top);
+    bootstrap_lapic_id = mp_response->bsp_lapic_id;
+    log_early("Detected %u CPUs, BSP LAPIC ID: %u", cpu_count, bootstrap_lapic_id);
 
     for (uint32_t i = 0; i < cpu_count; i++)
     {
         struct limine_mp_info *info = mp_response->cpus[i];
-        memset(&cpu_locals[i], 0, sizeof(cpu_local_t));
         cpu_locals[i].lapic_id = info->lapic_id;
         cpu_locals[i].cpu_index = i;
         cpu_locals[i].ready = false;
+    }
+}
 
+void smp_init(void)
+{
+    if (!mp_response)
+    {
+        kpanic(NULL, "No MP response from Limine");
+    }
+
+    lapic_enable();
+    for (uint32_t i = 0; i < cpu_count; i++)
+    {
+        struct limine_mp_info *info = mp_response->cpus[i];
         if (info->lapic_id == bootstrap_lapic_id)
         {
             set_cpu_local(&cpu_locals[i]);
+            init_cpu(&cpu_locals[i]);
             cpu_locals[i].ready = true;
             atomic_fetch_add(&started_cpus, 1);
-            log_early("CPU %u (LAPIC ID %u) is the bootstrap processor", i, info->lapic_id);
+            log_early("Bootstrap CPU %u (LAPIC ID %u) initialized", i, info->lapic_id);
         }
         else
         {
             __atomic_store_n(&info->goto_address, smp_entry, __ATOMIC_SEQ_CST);
-
-            volatile uint64_t timeout = 0;
-            while (!cpu_locals[i].ready)
+            uint64_t timeout = 0;
+            while (!cpu_locals[i].ready && timeout < CPU_START_TIMEOUT)
             {
                 __asm__ volatile("pause");
                 timeout++;
             }
 
-            if (!cpu_locals[i].ready)
+            if (cpu_locals[i].ready)
             {
-                log_early("warning: CPU %u (LAPIC ID %u) failed to start", i, info->lapic_id);
+                log_early("CPU %u (LAPIC ID %u) started successfully", i, info->lapic_id);
             }
             else
             {
-                log_early("CPU %u (LAPIC ID %u) started successfully", i, info->lapic_id);
+                log_early("Error: CPU %u (LAPIC ID %u) failed to start after %u cycles",
+                          i, info->lapic_id, CPU_START_TIMEOUT);
             }
         }
     }
 
-    log_early("All CPUs are ready");
+    log_early("SMP initialization complete, %u CPUs ready", started_cpus);
 }

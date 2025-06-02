@@ -68,6 +68,20 @@ struct limine_mp_response *mp_response = NULL;
 struct flanterm_context *ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
+void tick(struct register_ctx *)
+{
+    cpu_local_t *cpu = get_cpu_local();
+    if (cpu)
+    {
+        log_early("Timer tick on CPU %d (LAPIC ID %u)", cpu->cpu_index, cpu->lapic_id);
+    }
+    else
+    {
+        log_early("Timer tick on unknown CPU");
+    }
+    lapic_eoi();
+}
+
 void emk_entry(void)
 {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
@@ -200,6 +214,10 @@ void emk_entry(void)
 
     mp_response = mp_request.response;
     lapic_init();
+
+    smp_early_init();
+    ioapic_init();
+    pit_init(tick);
     smp_init();
 
     /* Finished */
