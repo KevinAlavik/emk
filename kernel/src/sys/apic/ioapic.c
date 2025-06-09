@@ -12,7 +12,9 @@
 
 static atomic_uintptr_t ioapic_base = 0;
 
-// Helper function to translate IRQ to GSI based on MADT ISO entries
+// Helper function to translate IRQ to GSI based on MADT ISO entries, because
+// someone thought it was a good idea to screw us the fuck over. It took a while
+// for me to understand why IRQ0 didnt wanna redirect, fucking I/O APIC...
 static uint32_t irq_to_gsi(uint32_t irq) {
     for (uint32_t i = 0; i < madt_iso_len; i++) {
         struct acpi_madt_ioapic_src_ovr* iso = madt_iso_list[i];
