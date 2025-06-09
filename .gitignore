@@ -5,3 +5,5 @@ ovmf/
 release/
 *.log
 .config*
+.cache/
+compile_commands.json

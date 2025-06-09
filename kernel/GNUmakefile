@@ -75,6 +75,12 @@ else
     CFLAGS += -DLARGE_PAGES=0
 endif
 
+ifeq ($(CONFIG_BROADCAST_PIT),y)
+	CFLAGS += -DBROADCAST_PIT=1
+else
+	CFLAGS += -DBROADCAST_PIT=0
+endif
+
 EXCLUDE_SRCS := \
     src/mm/heap/ff.c \
     ../external/flanterm/flanterm.c \

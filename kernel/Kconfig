@@ -60,4 +60,9 @@ menu "Experimental"
         bool "Enable 2M Pages"
         help
           Adds support for vmap_large()
+
+    config BROADCAST_PIT
+        bool "Broadcast PIT timer to all CPUs"
+        help
+          Runs PIT on all CPUs (cores)
 endmenu

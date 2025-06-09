@@ -2,7 +2,7 @@
 MAKEFLAGS += -rR
 .SUFFIXES:
 
-QEMUFLAGS := -smp 4
+QEMUFLAGS := -smp 4 -display none
 USER_QEMUFLAGS ?=
 IMAGE_NAME := release/emk
 

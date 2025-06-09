@@ -68,8 +68,9 @@ struct limine_mp_response *mp_response = NULL;
 struct flanterm_context *ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
-void tick(struct register_ctx *)
+void tick(struct register_ctx *ctx)
 {
+    (void)ctx;
     cpu_local_t *cpu = get_cpu_local();
     if (cpu)
     {
@@ -222,7 +223,7 @@ void emk_entry(void)
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
-    log_early("Finished initializing EMK v1.0, took ? seconds"); /* Still not running in usermode, so keep using log_early */
+    log_early("Finished initializing EMK v1.0, took (no boot-time found) seconds"); /* Still not running in usermode, so keep using log_early */
 
     ioapic_unmask(0); // start the timer
     __asm__ volatile("sti");

@@ -39,6 +39,10 @@ extern struct flanterm_context *ft_ctx;
 #define LARGE_PAGES 0
 #endif // LARGE_PAGES
 
+#ifndef BROADCAST_PIT
+#define BROADCAST_PIT 0
+#endif // BROADCAST_PIT
+
 #define LOG_SEPARATOR "----------------------------------------"
 
 #endif // EMK_H

@@ -29,5 +29,9 @@ void pit_init(idt_intr_handler handler)
     outb(0x40, (divisor >> 8) & 0xFF);
 
     idt_register_handler(PIT_VECTOR, pit_handler);
+#if BROADCAST_PIT
     ioapic_map(0, PIT_VECTOR, 0, 0xFF); /* Broadcast to ALL CPUs */
+#else
+    ioapic_map(0, PIT_VECTOR, 0, get_cpu_local()->lapic_id);
+#endif // BROADCAST_PIT
 }
