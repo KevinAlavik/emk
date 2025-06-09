@@ -14,7 +14,6 @@ menu "Build"
             bool "Release"
             help
               Build with optimizations and no debug symbols.
-
     endchoice
 endmenu
 
@@ -27,7 +26,6 @@ menu "Memory"
             bool "First-Fit"
             help
               Use the First-Fit memory allocation algorithm (ff.c).
-
     endchoice
 
     config KERNEL_HEAP_POOL_SIZE
@@ -59,10 +57,21 @@ menu "Experimental"
     config LARGE_PAGES
         bool "Enable 2M Pages"
         help
-          Adds support for vmap_large()
+          Adds support for vmap_large().
+endmenu
+
+menu "Deprecated"
+    comment "These features are deprecated and might not still work as expected."
+
+    config ENABLE_PIT
+        bool "Enable legacy PIT timer"
+        help
+          Adds support for the old PIT timer
 
     config BROADCAST_PIT
         bool "Broadcast PIT timer to all CPUs"
+        depends on ENABLE_PIT
         help
           Runs PIT on all CPUs (cores)
 endmenu
+

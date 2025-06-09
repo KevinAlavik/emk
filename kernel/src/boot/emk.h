@@ -47,6 +47,10 @@ extern struct flanterm_context* ft_ctx;
 #define BROADCAST_PIT 0
 #endif // BROADCAST_PIT
 
+#ifndef ENABLE_PIT
+#define ENABLE_PIT 0
+#endif // ENABLE_PIT
+
 #define LOG_SEPARATOR "----------------------------------------"
 
 #endif // EMK_H

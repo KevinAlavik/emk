@@ -228,7 +228,10 @@ void emk_entry(void) {
               "seconds"); /* Still not running in usermode, so keep using
                              log_early */
 
-    ioapic_unmask(0); // start the timer
+#if ENABLE_PIT
+    // Only unmask IRQ0 if we have PIT, becuz no other timer is available.
+    ioapic_unmask(0);
+#endif // ENABLE_PIT
     __asm__ volatile("sti");
     hlt();
 }

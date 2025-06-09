@@ -81,6 +81,13 @@ else
 	CFLAGS += -DBROADCAST_PIT=0
 endif
 
+# TODO: Make it use IMPLICIT_SRCs for legacy PIT
+ifeq ($(CONFIG_ENABLE_PIT),y)
+	CFLAGS += -DENABLE_PIT=1
+else
+	CFLAGS += -DENABLE_PIT=0
+endif
+
 EXCLUDE_SRCS := \
     src/mm/heap/ff.c \
     ../external/flanterm/flanterm.c \

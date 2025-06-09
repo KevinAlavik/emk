@@ -16,6 +16,7 @@ void pit_handler(struct register_ctx* frame) {
     lapic_eoi();
 }
 
+#if ENABLE_PIT
 void pit_init(idt_intr_handler handler) {
     if (handler)
         pit_callback = handler;
@@ -33,3 +34,10 @@ void pit_init(idt_intr_handler handler) {
     ioapic_map(0, PIT_VECTOR, 0, get_cpu_local()->lapic_id);
 #endif // BROADCAST_PIT
 }
+#else
+void pit_init(idt_intr_handler handler) {
+    (void)handler;
+    log_early("warning: Tried to initialize PIT: PIT is a deprecated feature "
+              "of the kernel, but you can force enable it in menuconfig");
+}
+#endif // ENABLE_PIT
