@@ -1,132 +1,141 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
-#include <boot/limine.h>
-#include <boot/emk.h>
 #include <arch/cpu.h>
-#include <arch/io.h>
-#include <dev/serial.h>
-#include <util/kprintf.h>
-#include <util/log.h>
 #include <arch/gdt.h>
 #include <arch/idt.h>
-#include <sys/kpanic.h>
-#include <mm/pmm.h>
+#include <arch/io.h>
 #include <arch/paging.h>
-#include <mm/vmm.h>
+#include <boot/emk.h>
+#include <boot/limine.h>
+#include <dev/serial.h>
 #include <mm/heap.h>
+#include <mm/pmm.h>
+#include <mm/vmm.h>
+#include <sys/kpanic.h>
+#include <util/kprintf.h>
+#include <util/log.h>
 #if FLANTERM_SUPPORT
-#include <flanterm/flanterm.h>
 #include <flanterm/backends/fb.h>
+#include <flanterm/flanterm.h>
 #endif // FLANTERM_SUPPORT
 #include <arch/smp.h>
+#include <dev/pit.h>
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
-#include <sys/apic/lapic.h>
 #include <sys/apic/ioapic.h>
-#include <dev/pit.h>
+#include <sys/apic/lapic.h>
 #include <sys/syscall.h>
 
-__attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_memmap_request memmap_request = {
-    .id = LIMINE_MEMMAP_REQUEST,
-    .revision = 0};
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_hhdm_request hhdm_request = {
-    .id = LIMINE_HHDM_REQUEST,
-    .revision = 0};
-__attribute__((used, section(".limine_requests"))) volatile struct limine_executable_address_request kernel_address_request = {
-    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
-    .response = 0};
+__attribute__((
+    used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
+__attribute__((
+    used,
+    section(".limine_requests"))) static volatile struct limine_memmap_request
+    memmap_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
+__attribute__((
+    used,
+    section(".limine_requests"))) static volatile struct limine_hhdm_request
+    hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 0};
+__attribute__((
+    used,
+    section(
+        ".limine_requests"))) volatile struct limine_executable_address_request
+    kernel_address_request = {.id = LIMINE_EXECUTABLE_ADDRESS_REQUEST,
+                              .response = 0};
 #if FLANTERM_SUPPORT
-__attribute__((used, section(".limine_requests"))) volatile struct limine_framebuffer_request framebuffer_request = {
-    .id = LIMINE_FRAMEBUFFER_REQUEST,
-    .response = 0};
+__attribute__((
+    used,
+    section(".limine_requests"))) volatile struct limine_framebuffer_request
+    framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST, .response = 0};
 #endif // FLANTERM_SUPPORT
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_rsdp_request rsdp_request = {
-    .revision = 0,
-    .id = LIMINE_RSDP_REQUEST};
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_mp_request mp_request = {
-    .revision = 0,
-    .id = LIMINE_MP_REQUEST};
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_bootloader_info_request binfo_request = {
-    .revision = 0,
-    .id = LIMINE_BOOTLOADER_INFO_REQUEST};
-__attribute__((used, section(".limine_requests"))) static volatile struct limine_firmware_type_request firmware_request = {
-    .revision = 0,
-    .id = LIMINE_FIRMWARE_TYPE_REQUEST};
-__attribute__((used, section(".limine_requests_start"))) static volatile LIMINE_REQUESTS_START_MARKER;
-__attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
+__attribute__((
+    used,
+    section(".limine_requests"))) static volatile struct limine_rsdp_request
+    rsdp_request = {.revision = 0, .id = LIMINE_RSDP_REQUEST};
+__attribute__((
+    used, section(".limine_requests"))) static volatile struct limine_mp_request
+    mp_request = {.revision = 0, .id = LIMINE_MP_REQUEST};
+__attribute__((used, section(".limine_requests"))) static volatile struct
+    limine_bootloader_info_request binfo_request = {
+        .revision = 0, .id = LIMINE_BOOTLOADER_INFO_REQUEST};
+__attribute__((used, section(".limine_requests"))) static volatile struct
+    limine_firmware_type_request firmware_request = {
+        .revision = 0, .id = LIMINE_FIRMWARE_TYPE_REQUEST};
+__attribute__((used,
+               section(".limine_requests_"
+                       "start"))) static volatile LIMINE_REQUESTS_START_MARKER;
+__attribute__((
+    used,
+    section(
+        ".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
 
 uint64_t hhdm_offset = 0;
-struct limine_memmap_response *memmap = NULL;
+struct limine_memmap_response* memmap = NULL;
 uint64_t kvirt = 0;
 uint64_t kphys = 0;
 uint64_t kstack_top = 0;
-vctx_t *kvm_ctx = NULL;
-struct limine_rsdp_response *rsdp_response = NULL;
-struct limine_mp_response *mp_response = NULL;
+vctx_t* kvm_ctx = NULL;
+struct limine_rsdp_response* rsdp_response = NULL;
+struct limine_mp_response* mp_response = NULL;
 
 #if FLANTERM_SUPPORT
-struct flanterm_context *ft_ctx = NULL;
+struct flanterm_context* ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
-void tick(struct register_ctx *ctx)
-{
+void tick(struct register_ctx* ctx) {
     (void)ctx;
-    cpu_local_t *cpu = get_cpu_local();
-    if (cpu)
-    {
-        log_early("Timer tick on CPU %d (LAPIC ID %u)", cpu->cpu_index, cpu->lapic_id);
-    }
-    else
-    {
+    cpu_local_t* cpu = get_cpu_local();
+    if (cpu) {
+        log_early("Timer tick on CPU %d (LAPIC ID %u)", cpu->cpu_index,
+                  cpu->lapic_id);
+    } else {
         log_early("Timer tick on unknown CPU");
     }
     lapic_eoi();
 }
 
-void emk_entry(void)
-{
+void emk_entry(void) {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
 
     /* Init flanterm if we compiled with support */
 #if FLANTERM_SUPPORT
-    struct limine_framebuffer *framebuffer = framebuffer_request.response->framebuffers[0];
+    struct limine_framebuffer* framebuffer =
+        framebuffer_request.response->framebuffers[0];
     ft_ctx = flanterm_fb_init(
-        NULL,
-        NULL,
-        framebuffer->address, framebuffer->width, framebuffer->height, framebuffer->pitch,
-        framebuffer->red_mask_size, framebuffer->red_mask_shift,
-        framebuffer->green_mask_size, framebuffer->green_mask_shift,
-        framebuffer->blue_mask_size, framebuffer->blue_mask_shift,
-        NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL, NULL,
-        NULL, 0, 0, 1,
-        0, 0,
-        0);
+        NULL, NULL, framebuffer->address, framebuffer->width,
+        framebuffer->height, framebuffer->pitch, framebuffer->red_mask_size,
+        framebuffer->red_mask_shift, framebuffer->green_mask_size,
+        framebuffer->green_mask_shift, framebuffer->blue_mask_size,
+        framebuffer->blue_mask_shift, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+        NULL, 0, 0, 1, 0, 0, 0);
 #endif // FLANTERM_SUPPORT
 
-    if (serial_init(COM1) != 0)
-    {
+    if (serial_init(COM1) != 0) {
         /* Just do nothing */
     }
 
-    if (!binfo_request.response)
-    {
+    if (!binfo_request.response) {
         kpanic(NULL, "Failed to get bootloader info");
     }
 
-    if (!firmware_request.response)
-    {
+    if (!firmware_request.response) {
         kpanic(NULL, "Failed to get firmware type");
     }
 
-    log_early("Experimental Micro Kernel (EMK) 1.0 Copyright (c) 2025 Piraterna");
-    log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s, bootloader: %s v%s, firmware: %s", __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no", binfo_request.response->name, binfo_request.response->version, (firmware_request.response->firmware_type == LIMINE_FIRMWARE_TYPE_UEFI64 || firmware_request.response->firmware_type == LIMINE_FIRMWARE_TYPE_UEFI32) ? "UEFI" : "BIOS");
+    log_early(
+        "Experimental Micro Kernel (EMK) 1.0 Copyright (c) 2025 Piraterna");
+    log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s, bootloader: "
+              "%s v%s, firmware: %s",
+              __TIME__, __DATE__, BUILD_MODE, FLANTERM_SUPPORT ? "yes" : "no",
+              binfo_request.response->name, binfo_request.response->version,
+              (firmware_request.response->firmware_type ==
+                   LIMINE_FIRMWARE_TYPE_UEFI64 ||
+               firmware_request.response->firmware_type ==
+                   LIMINE_FIRMWARE_TYPE_UEFI32)
+                  ? "UEFI"
+                  : "BIOS");
     log_early("%s", LOG_SEPARATOR);
 
-    if (!LIMINE_BASE_REVISION_SUPPORTED)
-    {
+    if (!LIMINE_BASE_REVISION_SUPPORTED) {
         kpanic(NULL, "Limine base revision is not supported");
         hcf();
     }
@@ -135,13 +144,11 @@ void emk_entry(void)
     idt_init();
 
     /* Setup physical memory*/
-    if (!hhdm_request.response)
-    {
+    if (!hhdm_request.response) {
         kpanic(NULL, "Failed to get HHDM request");
     }
 
-    if (!memmap_request.response)
-    {
+    if (!memmap_request.response) {
         kpanic(NULL, "Failed to get memmap request");
     }
 
@@ -150,7 +157,7 @@ void emk_entry(void)
     pmm_init();
 
     /* Test allocate a single physical page */
-    char *a = palloc(1, true);
+    char* a = palloc(1, true);
     if (!a)
         kpanic(NULL, "Failed to allocate single physical page");
 
@@ -158,8 +165,7 @@ void emk_entry(void)
     pfree(a, 1);
 
     /* Setup virtual memory */
-    if (!kernel_address_request.response)
-    {
+    if (!kernel_address_request.response) {
         kpanic(NULL, "Failed to get kernel address request");
     }
 
@@ -169,14 +175,12 @@ void emk_entry(void)
 
     /* Kernel Virtual Memory Context, not to be confused with KVM */
     kvm_ctx = vinit(kernel_pagemap, 0x1000);
-    if (!kvm_ctx)
-    {
+    if (!kvm_ctx) {
         kpanic(NULL, "Failed to create kernel VMM context");
     }
 
-    char *b = valloc(kvm_ctx, 1, VALLOC_RW);
-    if (!b)
-    {
+    char* b = valloc(kvm_ctx, 1, VALLOC_RW);
+    if (!b) {
         kpanic(NULL, "Failed to allocate single virtual page");
     }
 
@@ -185,9 +189,8 @@ void emk_entry(void)
 
     /* Setup kernel heap */
     heap_init();
-    char *c = kmalloc(1);
-    if (!c)
-    {
+    char* c = kmalloc(1);
+    if (!c) {
         kpanic(NULL, "Failed to allocate single byte on heap");
     }
 
@@ -196,8 +199,7 @@ void emk_entry(void)
 
     /* Setup ACPI */
     rsdp_response = rsdp_request.response;
-    if (!rsdp_response)
-    {
+    if (!rsdp_response) {
         kpanic(NULL, "Failed to get RSDP request");
     }
     acpi_init();
@@ -208,8 +210,7 @@ void emk_entry(void)
     outb(0xA1, 0xFF);
 
     /* Setup SMP */
-    if (!mp_request.response)
-    {
+    if (!mp_request.response) {
         kpanic(NULL, "Failed to get MP request");
     }
 
@@ -223,7 +224,9 @@ void emk_entry(void)
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
-    log_early("Finished initializing EMK v1.0, took (no boot-time found) seconds"); /* Still not running in usermode, so keep using log_early */
+    log_early("Finished initializing EMK v1.0, took (no boot-time found) "
+              "seconds"); /* Still not running in usermode, so keep using
+                             log_early */
 
     ioapic_unmask(0); // start the timer
     __asm__ volatile("sti");

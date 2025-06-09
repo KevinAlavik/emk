@@ -160,4 +160,10 @@ distclean: clean
 menuconfig: clean
 	@$(KCONFIG) Kconfig
 
+.PHONY: format
+format:
+	@echo "  FORMAT (clang-format)"
+	@find $(SRCDIR) ../external -type f \( -name '*.c' -o -name '*.h' \) \
+		-exec clang-format -i --style=file --fallback-style=none {} +
+
 -include $(DEPS)

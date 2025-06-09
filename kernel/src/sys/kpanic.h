@@ -4,6 +4,6 @@
 
 #include <arch/idt.h>
 
-void kpanic(struct register_ctx *ctx, const char *fmt, ...);
+void kpanic(struct register_ctx* ctx, const char* fmt, ...);
 
 #endif // KPANIC_H

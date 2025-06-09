@@ -2,13 +2,12 @@
 #ifndef SMP_H
 #define SMP_H
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define MAX_CPUS 256
 
-typedef struct
-{
+typedef struct {
     uint32_t lapic_id;
     uint32_t cpu_index;
     bool ready;
@@ -20,6 +19,6 @@ extern uint32_t cpu_count;
 
 void smp_early_init(void);
 void smp_init(void);
-cpu_local_t *get_cpu_local(void);
+cpu_local_t* get_cpu_local(void);
 
 #endif // SMP_H

@@ -3,23 +3,27 @@
 #define EMK_H
 
 #include <boot/limine.h>
-#include <stdint.h>
 #include <mm/vmm.h>
+#include <stdint.h>
 #if FLANTERM_SUPPORT
 #include <flanterm/flanterm.h>
 #endif // FLANTERM_SUPPORT
 
 extern uint64_t hhdm_offset;
-extern struct limine_memmap_response *memmap;
+extern struct limine_memmap_response* memmap;
 extern uint64_t kvirt;
 extern uint64_t kphys;
 extern uint64_t kstack_top;
-extern vctx_t *kvm_ctx;
-extern struct limine_rsdp_response *rsdp_response;
-extern struct limine_mp_response *mp_response;
+extern vctx_t* kvm_ctx;
+extern struct limine_rsdp_response* rsdp_response;
+extern struct limine_mp_response* mp_response;
 
-#define HIGHER_HALF(ptr) ((void *)((uint64_t)(ptr) < hhdm_offset ? (uint64_t)(ptr) + hhdm_offset : (uint64_t)(ptr)))
-#define PHYSICAL(ptr) ((void *)((uint64_t)(ptr) >= hhdm_offset ? (uint64_t)(ptr) - hhdm_offset : (uint64_t)(ptr)))
+#define HIGHER_HALF(ptr)                                                       \
+    ((void*)((uint64_t)(ptr) < hhdm_offset ? (uint64_t)(ptr) + hhdm_offset     \
+                                           : (uint64_t)(ptr)))
+#define PHYSICAL(ptr)                                                          \
+    ((void*)((uint64_t)(ptr) >= hhdm_offset ? (uint64_t)(ptr) - hhdm_offset    \
+                                            : (uint64_t)(ptr)))
 
 #define BIT(x) (1ULL << (x))
 
@@ -32,7 +36,7 @@ extern struct limine_mp_response *mp_response;
 #endif // BUILD_MODE
 
 #if FLANTERM_SUPPORT
-extern struct flanterm_context *ft_ctx;
+extern struct flanterm_context* ft_ctx;
 #endif // FLANTERM_SUPPORT
 
 #ifndef LARGE_PAGES

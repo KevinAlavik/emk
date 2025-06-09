@@ -48,7 +48,8 @@ void lapic_write(uint32_t offset, uint32_t value);
 void lapic_init(void);
 void lapic_enable(void);
 void lapic_eoi(void);
-void lapic_send_ipi(uint32_t apic_id, uint32_t vector, uint32_t delivery_mode, uint32_t dest_mode, uint32_t shorthand);
+void lapic_send_ipi(uint32_t apic_id, uint32_t vector, uint32_t delivery_mode,
+                    uint32_t dest_mode, uint32_t shorthand);
 uint32_t lapic_get_id(void);
 
 #endif // LAPIC_H

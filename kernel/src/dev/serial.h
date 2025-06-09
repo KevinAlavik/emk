@@ -40,7 +40,7 @@
 #define UART_BAUD_38400 3
 
 int serial_init(uint16_t port);
-int serial_write(uint16_t port, const uint8_t *data, uint32_t length);
-int serial_read(uint16_t port, uint8_t *buffer, uint32_t length);
+int serial_write(uint16_t port, const uint8_t* data, uint32_t length);
+int serial_read(uint16_t port, uint8_t* buffer, uint32_t length);
 
 #endif // SERIAL_H
