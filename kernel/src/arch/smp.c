@@ -50,8 +50,12 @@ static inline void set_cpu_local(cpu_local_t* cpu) {
 }
 
 static void init_cpu(cpu_local_t* cpu) {
+    // TODO: CPU-specific GDT with different TSS and such.
     gdt_init();
+
+    // FIXME: Maybe not re-initialize the entire IDT but rather just reload it
     idt_init();
+
     pmset(kernel_pagemap);
     lapic_enable();
     tss_init(kstack_top);

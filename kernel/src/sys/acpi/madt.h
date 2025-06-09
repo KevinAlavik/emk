@@ -8,7 +8,8 @@
 #define MADT_ENTRY_LAPIC 0          /* Local APIC */
 #define MADT_ENTRY_IOAPIC 1         /* I/O APIC */
 #define MADT_ENTRY_IOAPIC_SRC_OVR 2 /* I/O APIC Interrupt Source Override */
-#define MADT_ENTRY_IOAPIC_NMI_SRC 3 /* I/O APIC Non-Maskable Interrupt Source  \
+#define MADT_ENTRY_IOAPIC_NMI_SRC                                              \
+    3                               /* I/O APIC Non-Maskable Interrupt Source  \
                                      */
 #define MADT_ENTRY_LAPIC_NMI 4      /* Local APIC Non-Maskable Interrupt */
 #define MADT_ENTRY_LAPIC_ADDR_OVR 5 /* Local APIC Address Override */
