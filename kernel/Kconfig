@@ -36,6 +36,22 @@ menu "Memory"
           Set the pool size in pages for the First-Fit heap algorithm.
 endmenu
 
+menu "Timer"
+    choice
+        prompt "Kernel Timer API Backend"
+        default TIMER_API_PIT
+        config TIMER_API_PIT
+            bool "Legacy PIT timer"
+            help
+              Adds support for the outdated PIT timer
+    endchoice
+    config BROADCAST_PIT
+        bool "Broadcast PIT timer to all CPUs"
+        depends on ENABLE_PIT
+        help
+          Runs PIT on all CPUs (cores)
+endmenu
+
 menu "Toolchain"
     config CC
         string "C Compiler"
@@ -60,18 +76,4 @@ menu "Experimental"
           Adds support for vmap_large().
 endmenu
 
-menu "Deprecated"
-    comment "These features are deprecated and might not still work as expected."
-
-    config ENABLE_PIT
-        bool "Enable legacy PIT timer"
-        help
-          Adds support for the old PIT timer
-
-    config BROADCAST_PIT
-        bool "Broadcast PIT timer to all CPUs"
-        depends on ENABLE_PIT
-        help
-          Runs PIT on all CPUs (cores)
-endmenu
 

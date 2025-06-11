@@ -81,17 +81,15 @@ else
 	CFLAGS += -DBROADCAST_PIT=0
 endif
 
-# TODO: Make it use IMPLICIT_SRCs for legacy PIT
-ifeq ($(CONFIG_ENABLE_PIT),y)
-	CFLAGS += -DENABLE_PIT=1
-else
-	CFLAGS += -DENABLE_PIT=0
-endif
+ifeq ($(CONFIG_TIMER_API_PIT),y)
+	IMPLICIT_SRCS += src/dev/timer/pit.c
+endif # Automatically excluded by default
 
 EXCLUDE_SRCS := \
     src/mm/heap/ff.c \
     ../external/flanterm/flanterm.c \
-    ../external/flanterm/backends/fb.c
+    ../external/flanterm/backends/fb.c \
+	src/dev/timer/pit.c
 EXCLUDE_PATTERNS := $(foreach file,$(EXCLUDE_SRCS),! -path "$(file)")
 
 SRCS := $(IMPLICIT_SRCS) \

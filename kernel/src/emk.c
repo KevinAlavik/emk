@@ -18,7 +18,7 @@
 #include <flanterm/flanterm.h>
 #endif // FLANTERM_SUPPORT
 #include <arch/smp.h>
-#include <dev/pit.h>
+#include <dev/timer.h>
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
 #include <sys/apic/ioapic.h>
@@ -219,8 +219,11 @@ void emk_entry(void) {
 
     smp_early_init();
     ioapic_init();
-    pit_init(tick);
+    timer_init(tick);
     smp_init();
+
+    if (timer_enabled())
+        ioapic_unmask(0);
 
     /* Finished */
     log_early("%s", LOG_SEPARATOR);
@@ -228,10 +231,6 @@ void emk_entry(void) {
               "seconds"); /* Still not running in usermode, so keep using
                              log_early */
 
-#if ENABLE_PIT
-    // Only unmask IRQ0 if we have PIT, becuz no other timer is available.
-    ioapic_unmask(0);
-#endif // ENABLE_PIT
     __asm__ volatile("sti");
     hlt();
 }

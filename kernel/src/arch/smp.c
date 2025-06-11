@@ -7,7 +7,6 @@
 #include <arch/smp.h>
 #include <boot/emk.h>
 #include <boot/limine.h>
-#include <dev/pit.h>
 #include <lib/string.h>
 #include <mm/heap.h>
 #include <mm/pmm.h>

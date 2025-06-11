@@ -1,12 +1,13 @@
 /* EMK 1.0 Copyright (c) 2025 Piraterna */
 #include <arch/io.h>
 #include <arch/smp.h>
-#include <dev/pit.h>
+#include <dev/timer/pit.h>
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
 #include <util/log.h>
 
 #define PIT_VECTOR 32
+static bool _tapi_enabled = false;
 
 void (*pit_callback)(struct register_ctx* ctx) = NULL;
 
@@ -16,7 +17,6 @@ void pit_handler(struct register_ctx* frame) {
     lapic_eoi();
 }
 
-#if ENABLE_PIT
 void pit_init(idt_intr_handler handler) {
     if (handler)
         pit_callback = handler;
@@ -34,10 +34,11 @@ void pit_init(idt_intr_handler handler) {
     ioapic_map(0, PIT_VECTOR, 0, get_cpu_local()->lapic_id);
 #endif // BROADCAST_PIT
 }
-#else
-void pit_init(idt_intr_handler handler) {
-    (void)handler;
-    log_early("warning: Tried to initialize PIT: PIT is a deprecated feature "
-              "of the kernel, but you can force enable it in menuconfig");
+
+// Exposed timer API
+void timer_init(idt_intr_handler handler) {
+    pit_init(handler);
+    _tapi_enabled = true;
 }
-#endif // ENABLE_PIT
+
+bool timer_enabled() { return _tapi_enabled; }
