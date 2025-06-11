@@ -24,6 +24,7 @@
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
 #include <sys/syscall.h>
+#include <user/sched.h>
 
 __attribute__((
     used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
@@ -219,12 +220,15 @@ void emk_entry(void) {
 
     smp_early_init();
     ioapic_init();
+
 #if !DISABLE_TIMER
     timer_init(tick);
 #else
     log_early("warning: Kernel Timer API is disabled, scheduler is therefore "
               "also disabled");
 #endif // not DISABLE_TIMER
+
+    /* Initialize each CPU */
     smp_init();
 
 #if !DISABLE_TIMER

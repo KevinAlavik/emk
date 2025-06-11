@@ -27,6 +27,13 @@ extern struct limine_mp_response* mp_response;
 
 #define BIT(x) (1ULL << (x))
 
+#if defined(__GNUC__) || defined(__clang__)
+#define __unused __attribute__((unused))
+#else
+#define __unused
+#endif
+
+/* Defaults */
 #ifndef FLANTERM_SUPPORT
 #define FLANTERM_SUPPORT 0
 #endif // FLANTERM_SUPPORT
