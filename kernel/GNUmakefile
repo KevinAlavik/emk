@@ -85,6 +85,13 @@ ifeq ($(CONFIG_TIMER_API_PIT),y)
 	IMPLICIT_SRCS += src/dev/timer/pit.c
 endif # Automatically excluded by default
 
+# --- WARNING: This breaks the scheduler, this option doesnt respect CONFIG_TIMER_API_* ---
+ifeq ($(CONFIG_FORCE_DISABLE_TIMER_API),y)
+	CFLAGS += -DDISABLE_TIMER=1
+else
+	CFLAGS += -DDISABLE_TIMER=0
+endif
+
 EXCLUDE_SRCS := \
     src/mm/heap/ff.c \
     ../external/flanterm/flanterm.c \

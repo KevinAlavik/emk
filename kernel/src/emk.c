@@ -219,18 +219,20 @@ void emk_entry(void) {
 
     smp_early_init();
     ioapic_init();
+#if !DISABLE_TIMER
     timer_init(tick);
+#else
+    log_early("warning: Kernel Timer API is disabled, scheduler is therefore "
+              "also disabled");
+#endif // not DISABLE_TIMER
     smp_init();
 
+#if !DISABLE_TIMER
     if (timer_enabled())
         ioapic_unmask(0);
+#endif // not DISABLE_TIMER
 
-    /* Finished */
-    log_early("%s", LOG_SEPARATOR);
-    log_early("Finished initializing EMK v1.0, took (no boot-time found) "
-              "seconds"); /* Still not running in usermode, so keep using
-                             log_early */
-
+    /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
     hlt();
 }

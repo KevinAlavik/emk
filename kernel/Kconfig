@@ -65,6 +65,11 @@ menu "Extras"
         bool "Enable Flanterm Support"
         help
           Includes support for the Flanterm terminal emulator. Useful for debugging real hardware.
+
+    config FORCE_DISABLE_TIMER_API
+        bool "Force Disable timer API"
+        help
+          Removes support for all timer API backends, will break scheduler...
 endmenu
 
 menu "Experimental"
