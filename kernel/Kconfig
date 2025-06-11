@@ -47,7 +47,7 @@ menu "Timer"
     endchoice
     config BROADCAST_PIT
         bool "Broadcast PIT timer to all CPUs"
-        depends on ENABLE_PIT
+        depends on TIMER_API_PIT
         help
           Runs PIT on all CPUs (cores)
 endmenu
