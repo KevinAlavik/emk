@@ -249,7 +249,8 @@ void emk_entry(void) {
         if (cpu && cpu->ready)
             log_user("CPU %d ready", cpu->cpu_index);
     }
-    log_user("No scheduler :^(");
+    log_user("No scheduler: %s",
+             DISABLE_TIMER ? "Disabled (Not Present)" : "Not Present");
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
