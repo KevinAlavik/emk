@@ -36,7 +36,9 @@ void idt_default_interrupt_handler(struct register_ctx* ctx) {
 }
 
 /* pesky little trap which just halts the current cpu and lets it die alone */
-void die(struct register_ctx*) {
+void die(struct register_ctx* ctx) {
+    (void)ctx;
+
     /* If the CPU has caught this its game over */
     cpu_local_t* cpu = get_cpu_local();
     cpu->ready = false;
