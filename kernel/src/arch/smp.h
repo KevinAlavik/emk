@@ -5,7 +5,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MAX_CPUS 256
+#define MAX_CPUS                                                               \
+    64 // eh, should be enough. We could increase to 256 but i doubt anyone
+       // would run emk on that...
 
 typedef struct {
     uint32_t lapic_id;

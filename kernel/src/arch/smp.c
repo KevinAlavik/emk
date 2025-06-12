@@ -97,6 +97,11 @@ void smp_early_init(void) {
     }
 
     cpu_count = mp_response->cpu_count;
+    if (cpu_count > MAX_CPUS)
+        kpanic(
+            NULL,
+            "You have to many cores man, the max we support is %d, not %d >:D",
+            MAX_CPUS, cpu_count);
     bootstrap_lapic_id = mp_response->bsp_lapic_id;
     log_early("Detected %u CPUs, BSP LAPIC ID: %u", cpu_count,
               bootstrap_lapic_id);
