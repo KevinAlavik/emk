@@ -236,16 +236,16 @@ void emk_entry(void) {
         ioapic_unmask(0);
 #endif // not DISABLE_TIMER
 
-    // log_early("%s", LOG_SEPARATOR);
-    // log_early(" _____ __  __ _  __");
-    // log_early("| ____|  \\/  | |/ /");
-    // log_early("|  _| | |\\/| | ' / ");
-    // log_early("| |___| |  | | . \\ ");
-    // log_early("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
-    // log_early("%s", LOG_SEPARATOR);
+    log("%s", LOG_SEPARATOR);
+    log(" _____ __  __ _  __");
+    log("| ____|  \\/  | |/ /");
+    log("|  _| | |\\/| | ' / ");
+    log("| |___| |  | | . \\ ");
+    log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
+    log("%s", LOG_SEPARATOR);
 
-    log_user("No scheduler: %s",
-             DISABLE_TIMER ? "Disabled (Not Present)" : "Not Present");
+    kprintf("No scheduler: %s\n",
+            DISABLE_TIMER ? "Disabled (Not Present)" : "Not Present");
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

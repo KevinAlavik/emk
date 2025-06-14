@@ -23,11 +23,11 @@ struct idt_ptr idt_ptr = {sizeof(idt_descriptor) - 1,
                           (uint64_t)&idt_descriptor};
 
 void syscall_handler(struct register_ctx* ctx) {
-    log_user("syscall(%lu, 0x%.16lx, 0x%.16lx, 0x%.16lx, 0x%.16lx) from "
-             "0x%.16llx @ CPU %d",
-             ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->rcx, ctx->rip,
-             get_cpu_local()->cpu_index);
-    log_user("warning: No systemcall handlers available, dropping syscall...");
+    log("syscall(%lu, 0x%.16lx, 0x%.16lx, 0x%.16lx, 0x%.16lx) from "
+        "0x%.16llx @ CPU %d",
+        ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->rcx, ctx->rip,
+        get_cpu_local()->cpu_index);
+    log("warning: No systemcall handlers available, dropping syscall...");
     ctx->rax = -1;
 }
 

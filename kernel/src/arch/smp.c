@@ -20,7 +20,7 @@
 #include <util/log.h>
 
 #define MSR_GS_BASE 0xC0000101
-#define CPU_START_TIMEOUT 1000000
+#define CPU_START_TIMEOUT 10000000
 
 uint32_t cpu_count = 0;
 uint32_t bootstrap_lapic_id = 0;
@@ -49,6 +49,7 @@ static inline void set_cpu_local(cpu_local_t* cpu) {
 }
 
 static void init_cpu(cpu_local_t* cpu) {
+    (void)cpu;
     // TODO: CPU-specific GDT with different TSS and such.
     gdt_init();
 
@@ -58,8 +59,6 @@ static void init_cpu(cpu_local_t* cpu) {
     pmset(kernel_pagemap);
     lapic_enable();
     tss_init(kstack_top);
-    log_early("CPU %d (LAPIC ID %u) core components initialized",
-              cpu->cpu_index, cpu->lapic_id);
 }
 
 void smp_entry(struct limine_mp_info* smp_info) {
@@ -77,16 +76,11 @@ void smp_entry(struct limine_mp_info* smp_info) {
         kpanic(NULL, "CPU with LAPIC ID %u not found", lapic_id);
     }
 
-    // Initialize CPU
     set_cpu_local(cpu);
     init_cpu(cpu);
 
-    // Mark CPU as ready
     cpu->ready = true;
     atomic_fetch_add(&started_cpus, 1);
-    log_early("CPU %d (LAPIC ID %u) started", cpu->cpu_index, lapic_id);
-
-    // Enable interrupts and halt
     __asm__ volatile("sti");
     hlt();
 }
@@ -100,7 +94,7 @@ void smp_early_init(void) {
     if (cpu_count > MAX_CPUS)
         kpanic(
             NULL,
-            "You have to many cores man, the max we support is %d, not %d >:D",
+            "You have too many cores man, the max we support is %d, not %d >:D",
             MAX_CPUS, cpu_count);
     bootstrap_lapic_id = mp_response->bsp_lapic_id;
     log_early("Detected %u CPUs, BSP LAPIC ID: %u", cpu_count,
@@ -120,6 +114,7 @@ void smp_init(void) {
     }
 
     lapic_enable();
+
     for (uint32_t i = 0; i < cpu_count; i++) {
         struct limine_mp_info* info = mp_response->cpus[i];
         if (info->lapic_id == bootstrap_lapic_id) {
@@ -127,8 +122,6 @@ void smp_init(void) {
             init_cpu(&cpu_locals[i]);
             cpu_locals[i].ready = true;
             atomic_fetch_add(&started_cpus, 1);
-            log_early("Bootstrap CPU %u (LAPIC ID %u) initialized", i,
-                      info->lapic_id);
         } else {
             __atomic_store_n(&info->goto_address, smp_entry, __ATOMIC_SEQ_CST);
             uint64_t timeout = 0;
@@ -136,17 +129,18 @@ void smp_init(void) {
                 __asm__ volatile("pause");
                 timeout++;
             }
-
-            if (cpu_locals[i].ready) {
-                log_early("CPU %u (LAPIC ID %u) started successfully", i,
-                          info->lapic_id);
-            } else {
-                log_early("Error: CPU %u (LAPIC ID %u) failed to start after "
-                          "%u cycles",
-                          i, info->lapic_id, CPU_START_TIMEOUT);
+            if (!cpu_locals[i].ready) {
+                kpanic(NULL,
+                       "CPU %u (LAPIC ID %u) failed to start within timeout: "
+                       "%u of %u started",
+                       i, info->lapic_id, atomic_load(&started_cpus),
+                       cpu_count);
             }
         }
     }
 
-    log_early("SMP initialization complete, %u CPUs ready", started_cpus);
+    if (atomic_load(&started_cpus) != cpu_count) {
+        kpanic(NULL, "Not all CPUs started: %u of %u started",
+               atomic_load(&started_cpus), cpu_count);
+    }
 }

@@ -26,8 +26,6 @@ void gdt_init() {
 
 void flush_tss(void);
 void tss_init(uint64_t stack) {
-    log_early("Initializing TSS with RSP0 = 0x%.16llx", stack);
-
     memset(&tss, 0, sizeof(tss_entry_t));
 
     tss.rsp0 = stack;

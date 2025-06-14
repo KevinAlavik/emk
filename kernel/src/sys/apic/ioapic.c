@@ -130,10 +130,8 @@ void ioapic_init(void) {
         ioapic_write(0x10 + 2 * gsi, redtble_lo);
         ioapic_write(0x10 + 2 * gsi + 1, redtble_hi);
         if (is_overridden) {
-            log_early("Initialized IRQ %u (GSI %u) to vector 0x%x", irq, gsi,
-                      vec);
-        } else {
-            log_early("Initialized GSI %u to vector 0x%x", gsi, vec);
+            log_early("IRQ %u (GSI %u) is overridden to to vector 0x%x", irq,
+                      gsi, vec);
         }
     }
 }
