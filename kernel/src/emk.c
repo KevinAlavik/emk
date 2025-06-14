@@ -236,19 +236,14 @@ void emk_entry(void) {
         ioapic_unmask(0);
 #endif // not DISABLE_TIMER
 
-    log_early("%s", LOG_SEPARATOR);
-    log_early(" _____ __  __ _  __");
-    log_early("| ____|  \\/  | |/ /");
-    log_early("|  _| | |\\/| | ' / ");
-    log_early("| |___| |  | | . \\ ");
-    log_early("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
-    log_early("%s", LOG_SEPARATOR);
+    // log_early("%s", LOG_SEPARATOR);
+    // log_early(" _____ __  __ _  __");
+    // log_early("| ____|  \\/  | |/ /");
+    // log_early("|  _| | |\\/| | ' / ");
+    // log_early("| |___| |  | | . \\ ");
+    // log_early("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
+    // log_early("%s", LOG_SEPARATOR);
 
-    for (uint64_t i = 0; i < cpu_count; i++) {
-        cpu_local_t* cpu = &cpu_locals[i];
-        if (cpu && cpu->ready)
-            log_user("CPU %d ready", cpu->cpu_index);
-    }
     log_user("No scheduler: %s",
              DISABLE_TIMER ? "Disabled (Not Present)" : "Not Present");
 
