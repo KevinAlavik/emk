@@ -24,7 +24,6 @@
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
 #include <sys/syscall.h>
-#include <user/sched.h>
 
 __attribute__((
     used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
@@ -82,9 +81,16 @@ struct limine_mp_response* mp_response = NULL;
 struct flanterm_context* ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
-void tick(struct register_ctx* ctx) { schedule(ctx); }
-
-void test() { kprintf("hello from a proc ig\n"); }
+void tick(struct register_ctx* ctx) {
+    (void)ctx;
+    cpu_local_t* cpu = get_cpu_local();
+    if (cpu) {
+        log_early("Timer tick on CPU %d (LAPIC ID %u)", cpu->cpu_index,
+                  cpu->lapic_id);
+    } else {
+        log_early("Timer tick on unknown CPU");
+    }
+}
 
 void emk_entry(void) {
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
@@ -236,14 +242,6 @@ void emk_entry(void) {
     log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
     log("%s", LOG_SEPARATOR);
 
-#if DISABLE_TIMER
-    kprintf("Scheduler is disabled, halting the system forever...");
-    hcf();
-#else
-    __asm__ volatile("cli");
-    sched_init();
-    sched_spawn(test, false);
-#endif // DISABLE_TIMER
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
     hlt();
