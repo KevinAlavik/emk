@@ -2,39 +2,49 @@
 #ifndef SCHED_H
 #define SCHED_H
 
+// Based on:
+// https://codeberg.org/sild/soaplin/src/commit/ca602d4f73ea35003199defe40e7547dc12b5727
+
 #include <arch/idt.h>
 #include <arch/paging.h>
-#include <boot/emk.h>
+#include <mm/pmm.h>
+#include <mm/vmm.h>
+#include <stdbool.h>
 #include <stdint.h>
 
-typedef struct tcb tcb_t;
-typedef struct pcb pcb_t;
+#define THREAD_NOT_INITIALIZED 0
+#define THREAD_READY 1
+#define THREAD_RUNNING 2
+#define THREAD_BLOCKED 3
+#define THREAD_SLEEPING 4
 
-typedef struct pcb {
-    /* Meta data */
-    const char* name;      // A name for the process, usually the process path
-    uint32_t pid;          // Process ID tied to this proc
-    __unused uint32_t uid; // Owner UID
-    __unused uint32_t gid; // Owner GID
+struct process;
 
-    /* Data */
-    uint64_t* pm; // Root PML4 for the PCB
+typedef struct thread {
+    uint64_t stack_base;
+    struct register_ctx regs;
+    int tid;
+    int state;
+    bool user;
+    struct process* parent;
+    struct thread* next;
+    struct thread* list_next;
+} thread_t;
 
-    tcb_t* root_thread; // The main thread
-    pcb_t* next;        // Linked list :^)
-} pcb_t;
+typedef struct process {
+    int pid;
+    uint64_t* pm;
+    vctx_t* vma;
 
-typedef struct tcb {
-    /* Meta data */
-    const char name[32]; // A name for the thread, the first one usually has the
-                         // same name as parent PCB, or "main"
+    struct process* next;
+    struct thread* threads;
+    struct thread* threads_tail;
+} process_t;
 
-    /* Data */
-    struct register_ctx* ctx; // Pointer to register context
-    pcb_t* parent;            // Pointer to parent PCB
-    tcb_t* next;              // Linked list :^)
-} tcb_t;
-
-// TODO: Implement this sucker
+void sched_init();
+process_t* sched_new();
+thread_t* sched_new_thread(process_t* parent);
+void schedule(struct register_ctx* regs);
+process_t* sched_spawn(void (*f)(), bool user);
 
 #endif // SCHED_H

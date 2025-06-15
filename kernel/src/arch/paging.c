@@ -100,6 +100,20 @@ uint64_t* pmget(void) {
     return (uint64_t*)HIGHER_HALF(cr3);
 }
 
+/* Create  new pagemap */
+uint64_t* pmnew(void) {
+    uint64_t* pm = (uint64_t*)palloc(1, true);
+    if (pm == NULL) {
+        kpanic(NULL, "Failed to allocate page for new pagemap.");
+        return NULL;
+    }
+    memset(pm, 0, PAGE_SIZE);
+    if (kernel_pagemap) {
+        memcpy(pm + 256, kernel_pagemap + 256, 256 * sizeof(uint64_t));
+    }
+    return pm;
+}
+
 /* Map virtual to physical address (large 2M pages) */
 #if LARGE_PAGES
 bool _supports_large_pages() {

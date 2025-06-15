@@ -30,6 +30,7 @@ extern uint64_t kstack_top;
 
 void pmset(uint64_t* pagemap);
 uint64_t* pmget(void);
+uint64_t* pmnew(void);
 int vmap(uint64_t* pagemap, uint64_t virt, uint64_t phys, uint64_t flags);
 int vunmap(uint64_t* pagemap, uint64_t virt);
 uint64_t virt_to_phys(uint64_t* pagemap, uint64_t virt);
