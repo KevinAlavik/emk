@@ -87,7 +87,7 @@ uint64_t virt_to_phys(uint64_t* pagemap, uint64_t virt) {
 /* Set active pagemap (load CR3) */
 void pmset(uint64_t* pagemap) {
     if (!pagemap || !IS_PAGE_ALIGNED((uint64_t)PHYSICAL(pagemap))) {
-        kpanic(NULL, "Invalid pagemap");
+        kpanic(NULL, "Invalid pagemap, %p", pagemap);
     }
     __asm__ volatile("movq %0, %%cr3" ::"r"((uint64_t)PHYSICAL(pagemap))
                      : "memory");

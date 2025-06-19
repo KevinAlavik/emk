@@ -28,7 +28,8 @@
         "madt.h": "c",
         "ioapic.h": "c",
         "stdatomic.h": "c",
-        "pit.h": "c"
+        "pit.h": "c",
+        "string.h": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,

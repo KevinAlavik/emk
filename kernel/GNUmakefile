@@ -50,7 +50,7 @@ else
                -T linker.ld -Wl,-m,elf_x86_64
 endif
 
-CPPFLAGS := -I../external -I$(SRCDIR) -MMD -MP -DLIMINE_API_REVISION=3
+CPPFLAGS := -I../external -I../ -I$(SRCDIR) -MMD -MP -DLIMINE_API_REVISION=3
 CFLAGS   +=  -std=c99
 
 IMPLICIT_SRCS :=
@@ -100,7 +100,7 @@ EXCLUDE_SRCS := \
 EXCLUDE_PATTERNS := $(foreach file,$(EXCLUDE_SRCS),! -path "$(file)")
 
 SRCS := $(IMPLICIT_SRCS) \
-        $(shell find $(SRCDIR) -type f \( -name '*.c' -o -name '*.S' -o -name '*.asm' \) $(EXCLUDE_PATTERNS))
+        $(shell find $(SRCDIR) ../user -type f \( -name '*.c' -o -name '*.S' -o -name '*.asm' \) $(EXCLUDE_PATTERNS))
 
 define src_to_obj
 $(OBJDIR)/$(patsubst ../%,%,$(1:.c=.o))

@@ -24,6 +24,7 @@
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
 #include <sys/syscall.h>
+#include <user/sched.h>
 
 __attribute__((
     used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
@@ -82,14 +83,13 @@ struct flanterm_context* ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
 void tick(struct register_ctx* ctx) {
-    (void)ctx;
-    cpu_local_t* cpu = get_cpu_local();
-    if (cpu) {
-        log_early("Timer tick on CPU %d (LAPIC ID %u)", cpu->cpu_index,
-                  cpu->lapic_id);
-    } else {
-        log_early("Timer tick on unknown CPU");
-    }
+    // schedule
+    schedule(ctx);
+}
+
+void test(void) {
+    log("Hello from task!");
+    hlt();
 }
 
 void emk_entry(void) {
@@ -229,6 +229,9 @@ void emk_entry(void) {
     /* Initialize each CPU */
     smp_init();
 
+    /* Init the scheduler */
+    sched_init();
+
 #if !DISABLE_TIMER
     if (timer_enabled())
         ioapic_unmask(0);
@@ -241,6 +244,11 @@ void emk_entry(void) {
     log("| |___| |  | | . \\ ");
     log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
     log("%s", LOG_SEPARATOR);
+
+    int tid = tcreate(test, 0);
+    if (tid < 0) {
+        kpanic(NULL, "Failed to create test task");
+    }
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
