@@ -100,7 +100,7 @@ EXCLUDE_SRCS := \
 EXCLUDE_PATTERNS := $(foreach file,$(EXCLUDE_SRCS),! -path "$(file)")
 
 SRCS := $(IMPLICIT_SRCS) \
-        $(shell find $(SRCDIR) ../user -type f \( -name '*.c' -o -name '*.S' -o -name '*.asm' \) $(EXCLUDE_PATTERNS))
+        $(shell find $(SRCDIR) -type f \( -name '*.c' -o -name '*.S' -o -name '*.asm' \) $(EXCLUDE_PATTERNS))
 
 define src_to_obj
 $(OBJDIR)/$(patsubst ../%,%,$(1:.c=.o))
