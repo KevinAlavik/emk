@@ -228,7 +228,6 @@ void emk_entry(void) {
     /* Initialize each CPU */
     smp_init();
 
-
 #if !DISABLE_TIMER
     if (timer_enabled())
         ioapic_unmask(0);
@@ -242,6 +241,11 @@ void emk_entry(void) {
     log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
     log("%s", LOG_SEPARATOR);
 
+#if DISABLE_TIMER
+    kpanic(NULL, "Scheduler disabled, no point in continuing");
+#endif // DISABLE_TIMER
+
+    log("No scheduler available...");
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
