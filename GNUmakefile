@@ -2,8 +2,7 @@
 MAKEFLAGS += -rR
 .SUFFIXES:
 
-QEMUFLAGS := -smp 4 #-display none
-USER_QEMUFLAGS ?=
+QEMUFLAGS ?= -smp 4 -serial stdio #-display none
 IMAGE_NAME := release/emk
 
 HOST_CC := cc
@@ -15,7 +14,7 @@ all: $(IMAGE_NAME).iso
 .PHONY: run
 run: $(IMAGE_NAME).iso ovmf/ovmf-code-x86_64.fd
 	@qemu-system-x86_64 \
-		-M q35 -serial stdio \
+		-M q35 \
 		-drive if=pflash,unit=0,format=raw,file=ovmf/ovmf-code-x86_64.fd,readonly=on \
 		-cdrom $(IMAGE_NAME).iso \
 		$(QEMUFLAGS)
