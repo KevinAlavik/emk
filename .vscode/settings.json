@@ -37,5 +37,6 @@
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
-    "editor.formatOnType": true
+    "editor.formatOnType": true,
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc"
 }

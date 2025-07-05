@@ -342,8 +342,8 @@ void emk_entry(void) {
 
     uint64_t* pm = pmnew();
     uint64_t entry = elf_load(true, mod->address, pm);
-    log("Loaded init at %p", entry);
-    sched_spawn(true, (void (*)())entry, pm);
+    uint32_t pid = sched_spawn(true, (void (*)())entry, pm);
+    log("Loaded init at %p as pid %d", entry, pid);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

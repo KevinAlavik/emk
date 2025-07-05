@@ -4,7 +4,13 @@
 
 #include <stdint.h>
 
-/* TODO: Implement syscalls */
+#define SYS_exit 0
+
+#define SYSCALL_TABLE_SIZE 1
+
+typedef int (*syscall_fn_t)(...);
+extern syscall_fn_t syscall_table[];
+
 static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
                            uint64_t arg3) {
     long ret;

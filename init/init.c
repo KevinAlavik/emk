@@ -11,7 +11,7 @@ static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
 }
 
 void _start(void) {
-    syscall(1, 2, 3, 4);
+    syscall(0, 69, 0, 0);
     for (;;)
         ;
 }

@@ -23,12 +23,18 @@ struct idt_ptr idt_ptr = {sizeof(idt_descriptor) - 1,
                           (uint64_t)&idt_descriptor};
 
 void syscall_handler(struct register_ctx* ctx) {
-    log("syscall(%lu, 0x%.16lx, 0x%.16lx, 0x%.16lx, 0x%.16lx) from "
-        "0x%.16llx @ CPU %d",
-        ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx, ctx->rcx, ctx->rip,
-        get_cpu_local()->cpu_index);
-    log("warning: No systemcall handlers available, dropping syscall...");
-    ctx->rax = -1;
+    int status = 0;
+
+    if (ctx->rax < SYSCALL_TABLE_SIZE) {
+        status = syscall_table[ctx->rax]((void*)ctx->rdi, (void*)ctx->rsi,
+                                         (void*)ctx->rdx, (void*)ctx->rcx,
+                                         (void*)ctx->r8);
+    } else {
+        log("warning: Unknown syscall %lu", ctx->rax);
+        status = -1; // TODO: errno
+    }
+
+    ctx->rax = status;
 }
 
 void idt_default_interrupt_handler(struct register_ctx* ctx) {
