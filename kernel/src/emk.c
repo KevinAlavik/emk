@@ -303,7 +303,6 @@ void emk_entry(void) {
     log("%s", LOG_SEPARATOR);
 
     /* Handle init module */
-
     if (!cmdline_request.response || !mod_request.response) {
         log("error: Limine cmdline or module response is missing");
         return;
@@ -343,7 +342,6 @@ void emk_entry(void) {
     uint64_t* pm = pmnew();
     uint64_t entry = elf_load(true, mod->address, pm);
     uint32_t pid = sched_spawn(true, (void (*)())entry, pm);
-    log("Loaded init at %p as pid %d", entry, pid);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

@@ -22,7 +22,8 @@ static inline uint32_t atomic_inc_fetch(atomic_t* atom) {
                      : "=r"(old), "+m"(atom->value)
                      : "0"(1)
                      : "memory");
-    return old + 1;
+
+    return old;
 }
 
 #define PROC_DEFAULT_TIME 1
