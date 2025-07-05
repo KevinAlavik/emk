@@ -7,3 +7,5 @@ release/
 .config*
 .cache/
 compile_commands.json
+*.sys
+*.o

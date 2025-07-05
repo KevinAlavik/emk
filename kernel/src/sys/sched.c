@@ -8,6 +8,7 @@
 #include <sys/kpanic.h>
 #include <sys/sched.h>
 #include <sys/spinlock.h>
+#include <util/log.h>
 
 typedef struct {
     volatile uint32_t value;
@@ -113,13 +114,13 @@ uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap) {
     proc->ctx.rsp = (uint64_t)stack + (PAGE_SIZE * stack_size);
     proc->ctx.rflags = 0x202;
 
-    // Map process structure into its own address space
     vmap(proc->pagemap, (uint64_t)proc,
          virt_to_phys(kernel_pagemap, (uint64_t)proc), map_flags);
-
-    // Map process table
     map_range_to_pagemap(proc->pagemap, kernel_pagemap, (uint64_t)sched->procs,
                          sizeof(pcb_t*) * PROC_MAX_PROCS_PER_CPU, map_flags);
+
+    map_range_to_pagemap(proc->pagemap, kernel_pagemap, 0x1000, 0x10000,
+                         map_flags);
 
     proc->timeslice = PROC_DEFAULT_TIME;
     sched->procs[sched->count++] = proc;
@@ -142,7 +143,6 @@ void sched_tick(struct register_ctx* ctx) {
         return;
     }
 
-    // Save current process state
     pcb_t* current_proc = sched->procs[sched->current_pid];
     if (current_proc && current_proc->state == PROC_RUNNING) {
         memcpy(&current_proc->ctx, ctx, sizeof(struct register_ctx));
@@ -153,7 +153,6 @@ void sched_tick(struct register_ctx* ctx) {
         }
     }
 
-    // Find next runnable process
     uint32_t start_pid = sched->current_pid;
     pcb_t* next_proc = NULL;
     do {
@@ -161,12 +160,10 @@ void sched_tick(struct register_ctx* ctx) {
         next_proc = sched->procs[sched->current_pid];
 
         if (next_proc && next_proc->state == PROC_TERMINATED) {
-            // Clean up terminated process
             vdestroy(next_proc->vctx);
             vunmap(next_proc->pagemap, (uint64_t)next_proc);
             kfree(next_proc);
 
-            // Shift processes to fill the gap
             for (uint32_t i = sched->current_pid; i < sched->count - 1; i++) {
                 sched->procs[i] = sched->procs[i + 1];
             }

@@ -19,10 +19,14 @@
 #endif // FLANTERM_SUPPORT
 #include <arch/smp.h>
 #include <dev/timer.h>
+#include <lib/assert.h>
+#include <lib/ctype.h>
+#include <lib/string.h>
 #include <sys/acpi.h>
 #include <sys/acpi/madt.h>
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
+#include <sys/data/elf.h>
 #include <sys/sched.h>
 #include <sys/syscall.h>
 
@@ -36,6 +40,11 @@ __attribute__((
     used,
     section(".limine_requests"))) static volatile struct limine_hhdm_request
     hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 0};
+__attribute__((
+    used,
+    section(
+        ".limine_requests"))) volatile struct limine_executable_cmdline_request
+    cmdline_request = {.id = LIMINE_EXECUTABLE_CMDLINE_REQUEST, .revision = 0};
 __attribute__((
     used,
     section(
@@ -61,6 +70,10 @@ __attribute__((used, section(".limine_requests"))) static volatile struct
 __attribute__((used, section(".limine_requests"))) static volatile struct
     limine_firmware_type_request firmware_request = {
         .revision = 0, .id = LIMINE_FIRMWARE_TYPE_REQUEST};
+__attribute__((
+    used,
+    section(".limine_requests"))) static volatile struct limine_module_request
+    mod_request = {.revision = 0, .id = LIMINE_MODULE_REQUEST};
 __attribute__((used,
                section(".limine_requests_"
                        "start"))) static volatile LIMINE_REQUESTS_START_MARKER;
@@ -82,6 +95,41 @@ struct limine_mp_response* mp_response = NULL;
 struct flanterm_context* ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
+char* get_key(const char* cmdline, const char* key) {
+    if (!cmdline || !key)
+        return NULL;
+
+    size_t key_len = strlen(key);
+
+    while (*cmdline) {
+        while (*cmdline == ' ')
+            cmdline++;
+
+        if (strncmp(cmdline, key, key_len) == 0 && cmdline[key_len] == '=') {
+            const char* value_start = cmdline + key_len + 1;
+            const char* value_end = value_start;
+
+            while (*value_end && *value_end != ' ')
+                value_end++;
+
+            size_t len = value_end - value_start;
+            char* result = kmalloc(len + 1);
+            if (!result)
+                return NULL;
+
+            memcpy(result, value_start, len);
+            result[len] = '\0';
+            return result;
+        }
+
+        while (*cmdline && *cmdline != ' ')
+            cmdline++;
+    }
+
+    return NULL;
+}
+
+/* ---------------- SCHEDULER STUFF ---------------- */
 void tick(struct register_ctx* ctx) { sched_tick(ctx); }
 
 void test(void) {
@@ -89,6 +137,7 @@ void test(void) {
         get_cpu_local()->cpu_index);
     proc_exit(69);
 }
+/* ---------------------------------------------------*/
 
 void emk_entry(void) {
 
@@ -119,6 +168,14 @@ void emk_entry(void) {
         kpanic(NULL, "Failed to get firmware type");
     }
 
+    if (!cmdline_request.response) {
+        kpanic(NULL, "Failed to get kernel cmdline");
+    }
+
+    if (!mod_request.response) {
+        kpanic(NULL, "Failed to get kernel modules");
+    }
+
     log_early(
         "Experimental Micro Kernel (EMK) 1.0 Copyright (c) 2025 Piraterna");
     log_early("Compiled at %s %s, emk1.0-%s, flanterm support: %s, bootloader: "
@@ -144,15 +201,6 @@ void emk_entry(void) {
     /* Setup physical memory*/
     if (!hhdm_request.response) {
         kpanic(NULL, "Failed to get HHDM request");
-
-#define assert(expr)                                                           \
-    do {                                                                       \
-        if (!(expr)) {                                                         \
-            error("Assertion failed: (%s), file: %s, line: %d", #expr,         \
-                  __FILE__, __LINE__);                                         \
-            hlt();                                                             \
-        }                                                                      \
-    } while (0)
     }
 
     if (!memmap_request.response) {
@@ -254,7 +302,48 @@ void emk_entry(void) {
     log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
     log("%s", LOG_SEPARATOR);
 
-    sched_spawn(false, test, kernel_pagemap);
+    /* Handle init module */
+
+    if (!cmdline_request.response || !mod_request.response) {
+        log("error: Limine cmdline or module response is missing");
+        return;
+    }
+
+    char* cmdline = cmdline_request.response->cmdline;
+    uint32_t mod_count = mod_request.response->module_count;
+
+    char* init = get_key(cmdline, "init");
+    uint32_t mod_idx = 0;
+    if (!init) {
+        log("warning: No 'init' index present in kernel cmdline, "
+            "defaulting to 0");
+    } else {
+        mod_idx = atoi(init);
+    }
+
+    if (mod_idx >= mod_count) {
+        log("warning: 'init' index %u is out of range (mod_count = %u), "
+            "defaulting to 0",
+            mod_idx, mod_count);
+        mod_idx = 0;
+    }
+
+    // List all modules and highlight the scelected init module
+    for (uint32_t i = 0; i < mod_count; i++) {
+        struct limine_file* mod = mod_request.response->modules[i];
+        const char* prefix = (i == mod_idx) ? "\033[1minit mod -> " : "";
+        const char* suffix = (i == mod_idx) ? "\033[0m" : "";
+
+        log("%s[%u] %s: %u%s", prefix, i, mod->path, mod->size, suffix);
+    }
+
+    // Load and spawn the init module (normal ELF binary, for now)
+    struct limine_file* mod = mod_request.response->modules[mod_idx];
+
+    uint64_t* pm = pmnew();
+    uint64_t entry = elf_load(true, mod->address, pm);
+    log("Loaded init at %p", entry);
+    sched_spawn(true, (void (*)())entry, pm);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

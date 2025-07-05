@@ -29,7 +29,11 @@
         "ioapic.h": "c",
         "stdatomic.h": "c",
         "pit.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "sched.h": "c",
+        "assert.h": "c",
+        "ctype.h": "c",
+        "random": "c"
     },
     "editor.formatOnPaste": true,
     "editor.formatOnSave": true,
