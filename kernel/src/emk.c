@@ -23,6 +23,7 @@
 #include <sys/acpi/madt.h>
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
+#include <sys/sched.h>
 #include <sys/syscall.h>
 
 __attribute__((
@@ -81,17 +82,16 @@ struct limine_mp_response* mp_response = NULL;
 struct flanterm_context* ft_ctx = NULL;
 #endif // FLANTERM_SUPPORT
 
-void tick(struct register_ctx* ctx) {
-    // TODO: schedule
-    (void)ctx;
-}
+void tick(struct register_ctx* ctx) { sched_tick(ctx); }
 
 void test(void) {
-    log("Hello from task!");
-    hlt();
+    log("Hello from pid %d running on CPU %d", sched_get_current()->pid,
+        get_cpu_local()->cpu_index);
+    proc_exit(69);
 }
 
 void emk_entry(void) {
+
     __asm__ volatile("movq %%rsp, %0" : "=r"(kstack_top));
 
     /* Init flanterm if we compiled with support */
@@ -144,6 +144,15 @@ void emk_entry(void) {
     /* Setup physical memory*/
     if (!hhdm_request.response) {
         kpanic(NULL, "Failed to get HHDM request");
+
+#define assert(expr)                                                           \
+    do {                                                                       \
+        if (!(expr)) {                                                         \
+            error("Assertion failed: (%s), file: %s, line: %d", #expr,         \
+                  __FILE__, __LINE__);                                         \
+            hlt();                                                             \
+        }                                                                      \
+    } while (0)
     }
 
     if (!memmap_request.response) {
@@ -225,6 +234,10 @@ void emk_entry(void) {
               "also disabled");
 #endif // not DISABLE_TIMER
 
+#if DISABLE_TIMER
+    kpanic(NULL, "Scheduler disabled, no point in continuing");
+#endif // DISABLE_TIMER
+
     /* Initialize each CPU */
     smp_init();
 
@@ -241,11 +254,7 @@ void emk_entry(void) {
     log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
     log("%s", LOG_SEPARATOR);
 
-#if DISABLE_TIMER
-    kpanic(NULL, "Scheduler disabled, no point in continuing");
-#endif // DISABLE_TIMER
-
-    log("No scheduler available...");
+    sched_spawn(false, test, kernel_pagemap);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

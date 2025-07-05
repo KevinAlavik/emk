@@ -16,6 +16,7 @@
 #include <sys/apic/ioapic.h>
 #include <sys/apic/lapic.h>
 #include <sys/kpanic.h>
+#include <sys/sched.h>
 #include <util/align.h>
 #include <util/log.h>
 
@@ -59,6 +60,7 @@ static void init_cpu(cpu_local_t* cpu) {
     pmset(kernel_pagemap);
     lapic_enable();
     tss_init(kstack_top);
+    sched_init();
 }
 
 void smp_entry(struct limine_mp_info* smp_info) {
