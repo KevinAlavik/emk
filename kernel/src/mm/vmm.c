@@ -47,7 +47,7 @@ void* valloc(vctx_t* ctx, size_t pages, uint64_t flags) {
 
     while (region) {
         if (region->next == NULL ||
-            region->start + (pages * PAGE_SIZE) < region->next->start) {
+            region->start + (region->pages * PAGE_SIZE) < region->next->start) {
             new = (vregion_t*)palloc(1, true);
             if (!new)
                 return NULL;
@@ -153,6 +153,53 @@ void* vallocat(vctx_t* ctx, size_t pages, uint64_t flags, uint64_t phys) {
     return (void*)new->start;
 }
 
+void* vadd(vctx_t* ctx, uint64_t vaddr, uint64_t paddr, size_t pages,
+           uint64_t flags) {
+    if (ctx == NULL || ctx->root == NULL || ctx->pagemap == NULL)
+        return NULL;
+
+    vaddr = ALIGN_DOWN(vaddr, PAGE_SIZE);
+    paddr = ALIGN_DOWN(paddr, PAGE_SIZE);
+
+    uint64_t vend = vaddr + pages * PAGE_SIZE;
+
+    vregion_t* region = ctx->root;
+    while (region) {
+        uint64_t rstart = region->start;
+        uint64_t rend = region->start + region->pages * PAGE_SIZE;
+
+        if ((vaddr >= rstart && vaddr < rend) ||
+            (vend > rstart && vend <= rend) ||
+            (vaddr <= rstart && vend >= rend)) {
+            log("warning: vadd: overlapping region at 0x%lx", vaddr);
+            return NULL;
+        }
+        region = region->next;
+    }
+
+    vregion_t* new = (vregion_t*)palloc(1, true);
+    if (!new)
+        return NULL;
+
+    memset(new, 0, sizeof(vregion_t));
+    new->start = vaddr;
+    new->pages = pages;
+    new->flags = VFLAGS_TO_PFLAGS(flags);
+
+    new->next = ctx->root;
+    if (ctx->root)
+        ctx->root->prev = new;
+    ctx->root = new;
+
+    for (uint64_t i = 0; i < pages; i++) {
+        uint64_t vpage = vaddr + (i * PAGE_SIZE);
+        uint64_t ppage = paddr + (i * PAGE_SIZE);
+        vmap(ctx->pagemap, vpage, ppage, new->flags);
+    }
+
+    return (void*)vaddr;
+}
+
 void vfree(vctx_t* ctx, void* ptr) {
     if (ctx == NULL)
         return;
@@ -191,4 +238,76 @@ void vfree(vctx_t* ctx, void* ptr) {
         ctx->root = next;
 
     pfree(region, 1);
+}
+
+vregion_t* vget(vctx_t* ctx, uint64_t vaddr) {
+    if (ctx == NULL || ctx->root == NULL)
+        return NULL;
+
+    vregion_t* region = ctx->root;
+    while (region != NULL) {
+        uint64_t start = region->start;
+        uint64_t end = start + (region->pages * PAGE_SIZE);
+
+        if (vaddr >= start && vaddr < end)
+            return region;
+
+        region = region->next;
+    }
+
+    return NULL;
+}
+
+const char* vflags_to_str(uint64_t flags) {
+    static char out[8];
+    int i = 0;
+
+    if (flags & VALLOC_READ)
+        out[i++] = 'R';
+    if (flags & VALLOC_WRITE)
+        out[i++] = 'W';
+    if (flags & VALLOC_EXEC)
+        out[i++] = 'X';
+    if (flags & VALLOC_USER)
+        out[i++] = 'U';
+    if (i == 0)
+        out[i++] = '-';
+
+    out[i] = '\0';
+    return out;
+}
+
+const char* vpflags_to_str(uint64_t flags) {
+    static char out[8];
+    int i = 0;
+
+    if (flags & VMM_PRESENT)
+        out[i++] = 'P';
+    if (flags & VMM_WRITE)
+        out[i++] = 'W';
+    if (!(flags & VMM_NX))
+        out[i++] = 'X';
+    if (flags & VMM_USER)
+        out[i++] = 'U';
+    if (i == 0)
+        out[i++] = '-';
+
+    out[i] = '\0';
+    return out;
+}
+
+void vdump(vctx_t* ctx) {
+    if (!ctx) {
+        log("vdump: ctx is NULL");
+        return;
+    }
+
+    log("vdump for context at %p", ctx);
+    vregion_t* region = ctx->root;
+    while (region) {
+        log("  region %p: start=0x%.16lx, pages=%lu, flags=0x%lx \t(%s)",
+            region, region->start, region->pages, region->flags,
+            vpflags_to_str(region->flags));
+        region = region->next;
+    }
 }

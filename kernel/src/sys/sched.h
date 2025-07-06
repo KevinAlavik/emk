@@ -29,7 +29,8 @@ typedef struct pcb {
 } pcb_t;
 
 void sched_init();
-uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap);
+uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap,
+                     vctx_t* vctx);
 void sched_tick(struct register_ctx* ctx);
 pcb_t* sched_get_current();
 void proc_exit(int32_t code);

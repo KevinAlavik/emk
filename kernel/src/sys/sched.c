@@ -65,7 +65,8 @@ void sched_init(void) {
     spinlock_init(&sched->lock);
 }
 
-uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap) {
+uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap,
+                     vctx_t* vctx) {
     cpu_local_t* cpu = get_cpu_local();
     cpu_sched_t* sched = &cpu_schedulers[cpu->cpu_index];
 
@@ -90,7 +91,7 @@ uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap) {
     proc->state = PROC_READY;
     proc->ctx.rip = (uint64_t)entry;
     proc->pagemap = pagemap ? pagemap : kernel_pagemap;
-    proc->vctx = vinit(proc->pagemap, 0x10000);
+    proc->vctx = vctx ? vctx : vinit(proc->pagemap, 0x10000);
 
     uint64_t stack_size = 4; // 4 pages ~16KB
     uint64_t map_flags = VMM_PRESENT | VMM_WRITE;

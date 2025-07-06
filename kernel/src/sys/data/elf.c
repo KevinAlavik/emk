@@ -42,36 +42,17 @@ typedef struct {
     uint64_t p_align;
 } __attribute__((packed)) elf_pheader_t;
 
-typedef struct {
-    uint32_t sh_name;
-    uint32_t sh_type;
-    uint64_t sh_flags;
-    uint64_t sh_addr;
-    uint64_t sh_offset;
-    uint64_t sh_size;
-    uint32_t sh_link;
-    uint32_t sh_info;
-    uint64_t sh_addralign;
-    uint64_t sh_entsize;
-} __attribute__((packed)) elf_sheader_t;
-
 #define ELF_MAGIC 0x464C457F
 
-#define PT_NULL 0
 #define PT_LOAD 1
-#define PT_DYNAMIC 2
-#define PT_INTERP 3
-#define PT_NOTE 4
-#define PT_SHLIB 5
-#define PT_PHDR 6
-#define PT_TLS 7
 
 #define PF_X 0x1 // Execute
 #define PF_W 0x2 // Write
 #define PF_R 0x4 // Read
 
-uint64_t elf_load(bool user, void* data, uint64_t* pagemap) {
+uint64_t elf_load(bool user, void* data, vctx_t* ctx) {
     assert(data);
+    assert(ctx);
     elf_header_t* header = (elf_header_t*)data;
 
     if (header->e_magic != ELF_MAGIC) {
@@ -90,61 +71,43 @@ uint64_t elf_load(bool user, void* data, uint64_t* pagemap) {
     }
 
     elf_pheader_t* ph = (elf_pheader_t*)((uint8_t*)data + header->e_phoff);
+
     for (uint16_t i = 0; i < header->e_phnum; i++) {
         if (ph[i].p_type != PT_LOAD)
             continue;
 
         uint64_t vaddr_start = ALIGN_DOWN(ph[i].p_vaddr, PAGE_SIZE);
         uint64_t vaddr_end = ALIGN_UP(ph[i].p_vaddr + ph[i].p_memsz, PAGE_SIZE);
-        uint64_t offset = ph[i].p_offset;
+        size_t pages = (vaddr_end - vaddr_start) / PAGE_SIZE;
 
-        uint64_t flags = VMM_PRESENT;
+        uint64_t flags = VALLOC_READ;
         if (ph[i].p_flags & PF_W)
-            flags |= VMM_WRITE;
-        if (!(ph[i].p_flags & PF_X))
-            flags |= VMM_NX;
-
+            flags |= VALLOC_WRITE;
+        if (ph[i].p_flags & PF_X)
+            flags |= VALLOC_EXEC;
         if (user)
-            flags |= VMM_USER;
+            flags |= VALLOC_USER;
 
-        uint64_t page_offset = ph[i].p_vaddr & (PAGE_SIZE - 1);
-
-        for (uint64_t vaddr = vaddr_start; vaddr < vaddr_end;
-             vaddr += PAGE_SIZE) {
-            uint64_t phys = (uint64_t)palloc(1, false);
-            if (!phys) {
-                log("error: Out of physical memory while loading ELF segment.");
-                return 0;
-            }
-
-            vmap(pagemap, vaddr, phys, flags);
-            memset((void*)HIGHER_HALF(phys), 0, PAGE_SIZE);
-
-            uint64_t file_page_offset = offset + (vaddr - vaddr_start);
-            uint64_t file_data_end = offset + ph[i].p_filesz;
-
-            if (file_page_offset < file_data_end) {
-                uint64_t bytes_from_start = vaddr - vaddr_start;
-                uint64_t page_data_offset = 0;
-
-                if (bytes_from_start == 0 && page_offset > 0) {
-                    page_data_offset = page_offset;
-                }
-
-                uint64_t copy_offset = file_page_offset;
-                uint64_t copy_size = PAGE_SIZE - page_data_offset;
-
-                if (copy_offset + copy_size > file_data_end) {
-                    copy_size = file_data_end - copy_offset;
-                }
-
-                if (copy_size > 0) {
-                    void* dest = (void*)(HIGHER_HALF(phys) + page_data_offset);
-                    void* src = (uint8_t*)data + copy_offset;
-                    memcpy(dest, src, copy_size);
-                }
-            }
+        uint64_t phys = (uint64_t)palloc(pages, false);
+        if (!phys) {
+            log("error: Out of physical memory while loading ELF segment.");
+            return 0;
         }
+
+        if (!vadd(ctx, vaddr_start, phys, pages, flags)) {
+            log("error: Failed to map ELF segment at 0x%lx", vaddr_start);
+            pfree((void*)phys, pages);
+            return 0;
+        }
+
+        memset((void*)HIGHER_HALF(phys), 0, pages * PAGE_SIZE);
+
+        uint64_t file_offset = ph[i].p_offset;
+        uint64_t mem_offset = ph[i].p_vaddr - vaddr_start;
+        void* dest = (void*)(HIGHER_HALF(phys) + mem_offset);
+        void* src = (uint8_t*)data + file_offset;
+        memcpy(dest, src, ph[i].p_filesz);
     }
+
     return header->e_entry;
 }

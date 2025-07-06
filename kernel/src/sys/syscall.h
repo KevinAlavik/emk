@@ -6,7 +6,7 @@
 
 #define SYS_exit 0
 
-#define SYSCALL_TABLE_SIZE 1
+#define SYSCALL_TABLE_SIZE 2
 
 typedef int (*syscall_fn_t)(...);
 extern syscall_fn_t syscall_table[];

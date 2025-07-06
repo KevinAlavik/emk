@@ -339,9 +339,9 @@ void emk_entry(void) {
     // Load and spawn the init module (normal ELF binary, for now)
     struct limine_file* mod = mod_request.response->modules[mod_idx];
 
-    uint64_t* pm = pmnew();
-    uint64_t entry = elf_load(true, mod->address, pm);
-    uint32_t pid = sched_spawn(true, (void (*)())entry, pm);
+    vctx_t* vctx = vinit(pmnew(), 0x10000);
+    uint64_t entry = elf_load(true, mod->address, vctx);
+    uint32_t pid = sched_spawn(true, (void (*)())entry, vctx->pagemap, vctx);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");

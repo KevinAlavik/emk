@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <sys/apic/lapic.h>
 #include <sys/kpanic.h>
+#include <sys/sched.h>
 #include <util/kprintf.h>
 #include <util/log.h>
 
@@ -93,6 +94,31 @@ static void capture_regs(struct register_ctx* context) {
     context->rip = (uint64_t)__builtin_return_address(0);
 }
 
+void backtrace(struct register_ctx* ctx) {
+    uint64_t rbp = ctx->rbp;
+    uint64_t rip = ctx->rip;
+
+    log_panic("Stack Backtrace:");
+    log_panic("  [0] 0x%.16llx (kpanic caller)", rip);
+
+    int frame = 1;
+
+#define MAX_BACKTRACE_FRAMES 20
+    while (rbp != 0 && frame < MAX_BACKTRACE_FRAMES) {
+        uint64_t* frame_ptr = (uint64_t*)rbp;
+        uint64_t next_rbp = frame_ptr[0];
+        uint64_t return_addr = frame_ptr[1];
+
+        log_panic("  [%d] 0x%.16llx", frame, return_addr);
+        rbp = next_rbp;
+        frame++;
+    }
+
+    if (frame >= MAX_BACKTRACE_FRAMES) {
+        log_panic("  Backtrace truncated at %d frames", MAX_BACKTRACE_FRAMES);
+    }
+}
+
 void kpanic(struct register_ctx* ctx, const char* fmt, ...) {
     /* Halt all other CPU's using our custom die trap at 0xFE/254 */
     lapic_send_ipi(0, 0xFE, ICR_FIXED, ICR_PHYSICAL, ICR_ALL_EXCLUDING_SELF);
@@ -160,6 +186,8 @@ void kpanic(struct register_ctx* ctx, const char* fmt, ...) {
         "  cr0: 0x%.16llx  cr2:    0x%.16llx  cr3: 0x%.16llx  cr4: 0x%.16llx",
         regs.cr0, regs.cr2, regs.cr3, regs.cr4);
     log_panic("  err: 0x%.16llx  vector: 0x%.16llx", regs.err, regs.vector);
+
+    backtrace(ctx);
 
     hcf();
 }

@@ -11,7 +11,7 @@ static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
 }
 
 void _start(void) {
-    syscall(0, 69, 0, 0);
-    for (;;)
-        ;
+    const char* test = "Hello, World!\n";
+    syscall(1, (uint64_t)test, 0, 0);
+    syscall(0, 0, 0, 0);
 }

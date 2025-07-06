@@ -37,6 +37,10 @@ vctx_t* vinit(uint64_t* pm, uint64_t start);
 void vdestroy(vctx_t* ctx);
 void* valloc(vctx_t* ctx, size_t pages, uint64_t flags);
 void* vallocat(vctx_t* ctx, size_t pages, uint64_t flags, uint64_t phys);
+void* vadd(vctx_t* ctx, uint64_t vaddr, uint64_t paddr, size_t pages,
+           uint64_t flags);
 void vfree(vctx_t* ctx, void* ptr);
+vregion_t* vget(vctx_t* ctx, uint64_t vaddr);
+void vdump(vctx_t* ctx);
 
 #endif // VMM_H

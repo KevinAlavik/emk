@@ -4,6 +4,6 @@
 
 #include <stdint.h>
 
-uint64_t elf_load(bool user, void* data, uint64_t* pagemap);
+uint64_t elf_load(bool user, void* data, vctx_t* ctx);
 
 #endif // ELF_H
