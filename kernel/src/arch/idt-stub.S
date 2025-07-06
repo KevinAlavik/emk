@@ -34,6 +34,11 @@ isr_handler_stub:
 
     cld
 
+    movq 168(%rsp), %rax
+    testw $3, %ax
+    jz .Lskip_swapgs
+    swapgs
+.Lskip_swapgs:
     movq %rsp, %rdi
     movq 168(%rsp), %rbx
     shlq $3, %rbx
