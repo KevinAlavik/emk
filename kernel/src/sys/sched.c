@@ -121,8 +121,12 @@ uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap,
     map_range_to_pagemap(proc->pagemap, kernel_pagemap, (uint64_t)sched->procs,
                          sizeof(pcb_t*) * PROC_MAX_PROCS_PER_CPU, map_flags);
 
-    map_range_to_pagemap(proc->pagemap, kernel_pagemap, 0x10000, 0x10000,
-                         map_flags);
+    for (vregion_t* region = kvm_ctx->root; region != NULL;
+         region = region->next) {
+        uint64_t size = region->pages * PAGE_SIZE;
+        map_range_to_pagemap(proc->pagemap, kernel_pagemap, region->start, size,
+                             map_flags);
+    }
 
     proc->timeslice = PROC_DEFAULT_TIME;
     sched->procs[sched->count++] = proc;

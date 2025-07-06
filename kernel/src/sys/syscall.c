@@ -12,7 +12,6 @@ int sys_exit(int code) {
 }
 
 int sys_test(void* buff) {
-    vdump(sched_get_current()->vctx);
     vregion_t* r = vget(sched_get_current()->vctx, (uint64_t)buff);
     if (!r) {
         log("test(%p): region not found", buff);
