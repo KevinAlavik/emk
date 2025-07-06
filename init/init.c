@@ -1,6 +1,6 @@
 #include <stdint.h>
 
-__attribute__((section(".data"))) char test[] = "Hello, World!";
+char test[] = "Hello, World!";
 
 static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
                            uint64_t arg3) {

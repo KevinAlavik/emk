@@ -295,14 +295,6 @@ void emk_entry(void) {
         ioapic_unmask(0);
 #endif // not DISABLE_TIMER
 
-    log("%s", LOG_SEPARATOR);
-    log(" _____ __  __ _  __");
-    log("| ____|  \\/  | |/ /");
-    log("|  _| | |\\/| | ' / ");
-    log("| |___| |  | | . \\ ");
-    log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
-    log("%s", LOG_SEPARATOR);
-
     /* Handle init module */
     if (!cmdline_request.response || !mod_request.response) {
         log("error: Limine cmdline or module response is missing");
@@ -336,6 +328,14 @@ void emk_entry(void) {
 
         log("%s[%u] %s: %u%s", prefix, i, mod->path, mod->size, suffix);
     }
+
+    log("%s", LOG_SEPARATOR);
+    log(" _____ __  __ _  __");
+    log("| ____|  \\/  | |/ /");
+    log("|  _| | |\\/| | ' / ");
+    log("| |___| |  | | . \\ ");
+    log("|_____|_|  |_|_|\\_\\ Copyright (c) Piraterna 2025");
+    log("%s", LOG_SEPARATOR);
 
     // Load and spawn the init module (normal ELF binary, for now)
     struct limine_file* mod = mod_request.response->modules[mod_idx];
