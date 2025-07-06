@@ -42,5 +42,7 @@ void* vadd(vctx_t* ctx, uint64_t vaddr, uint64_t paddr, size_t pages,
 void vfree(vctx_t* ctx, void* ptr);
 vregion_t* vget(vctx_t* ctx, uint64_t vaddr);
 void vdump(vctx_t* ctx);
+const char* vpflags_to_str(uint64_t flags);
+const char* vflags_to_str(uint64_t flags);
 
 #endif // VMM_H

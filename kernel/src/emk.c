@@ -133,10 +133,11 @@ char* get_key(const char* cmdline, const char* key) {
 void tick(struct register_ctx* ctx) { sched_tick(ctx); }
 
 void test(void) {
-    log("Hello from pid %d running on CPU %d", sched_get_current()->pid,
-        get_cpu_local()->cpu_index);
-    proc_exit(69);
+    while (1)
+        log("Hello from pid %d running on CPU %d", sched_get_current()->pid,
+            get_cpu_local()->cpu_index);
 }
+
 /* ---------------------------------------------------*/
 
 void emk_entry(void) {

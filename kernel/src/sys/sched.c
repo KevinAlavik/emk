@@ -236,6 +236,20 @@ void proc_exit(int32_t code) {
 
 pcb_t* sched_get_current(void) {
     cpu_local_t* cpu = get_cpu_local();
+    if (!cpu || cpu->cpu_index >= MAX_CPUS) {
+        return NULL;
+    }
+
     cpu_sched_t* sched = &cpu_schedulers[cpu->cpu_index];
-    return sched->procs[sched->current_pid];
+    if (!sched || sched->count == 0) {
+        return NULL;
+    }
+
+    uint32_t idx = sched->current_pid;
+    if (idx >= sched->count) {
+        return NULL;
+    }
+
+    pcb_t* proc = sched->procs[idx];
+    return proc;
 }

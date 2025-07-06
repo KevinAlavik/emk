@@ -1,5 +1,7 @@
 #include <stdint.h>
 
+__attribute__((section(".data"))) char test[] = "Hello, World!";
+
 static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
                            uint64_t arg3) {
     long ret;
@@ -11,7 +13,7 @@ static inline long syscall(uint64_t number, uint64_t arg1, uint64_t arg2,
 }
 
 void _start(void) {
-    const char* test = "Hello, World!\n";
     syscall(1, (uint64_t)test, 0, 0);
+    syscall(2, (uint64_t)test, 0, 0);
     syscall(0, 0, 0, 0);
 }
