@@ -86,22 +86,6 @@ int sys_exit(int code) {
     return 0;
 }
 
-int sys_test(void* buff) {
-    const char* msg = "pwned by kernel, cry about it";
-    vctx_t* vctx = sched_get_current()->vctx;
-
-    if (!vctx)
-        return -1;
-
-    log("sys_test: Overwriting user buffer with kernel message >:D");
-
-    if (copy_to_user(vctx, buff, msg, strlen(msg) + 1) < 0) {
-        return -1;
-    }
-
-    return 0;
-}
-
 int sys_msg(char* s) {
     log("Message from PID %d: \033[1m%s\033[0m", sched_get_current()->pid, s);
     return 0;
@@ -109,6 +93,5 @@ int sys_msg(char* s) {
 
 syscall_fn_t syscall_table[] = {
     (syscall_fn_t)sys_exit, // SYS_exit
-    (syscall_fn_t)sys_test,
-    (syscall_fn_t)sys_msg,
+    (syscall_fn_t)sys_msg,  // SYS_msg
 };

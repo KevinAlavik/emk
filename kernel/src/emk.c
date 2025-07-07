@@ -131,13 +131,6 @@ char* get_key(const char* cmdline, const char* key) {
 
 /* ---------------- SCHEDULER STUFF ---------------- */
 void tick(struct register_ctx* ctx) { sched_tick(ctx); }
-
-void test(void) {
-    while (1)
-        log("Hello from pid %d running on CPU %d", sched_get_current()->pid,
-            get_cpu_local()->cpu_index);
-}
-
 /* ---------------------------------------------------*/
 
 void emk_entry(void) {
@@ -341,8 +334,8 @@ void emk_entry(void) {
     struct limine_file* mod = mod_request.response->modules[mod_idx];
 
     vctx_t* vctx = vinit(pmnew(), 0x10000);
-    uint64_t entry = elf_load(true, mod->address, vctx);
-    uint32_t pid = sched_spawn(true, (void (*)())entry, vctx->pagemap, vctx);
+    sched_spawn(true, (void (*)())elf_load(true, mod->address, vctx),
+                vctx->pagemap, vctx);
 
     /* Finished, just enable interrupts and go on with our day... */
     __asm__ volatile("sti");
