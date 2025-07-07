@@ -253,3 +253,22 @@ pcb_t* sched_get_current(void) {
     pcb_t* proc = sched->procs[idx];
     return proc;
 }
+
+pcb_t* sched_find_pcb(uint32_t pid) {
+    for (uint32_t cpu_idx = 0; cpu_idx < MAX_CPUS; cpu_idx++) {
+        cpu_sched_t* sched = &cpu_schedulers[cpu_idx];
+        spinlock_acquire(&sched->lock);
+
+        for (uint32_t i = 0; i < sched->count; i++) {
+            pcb_t* proc = sched->procs[i];
+            if (proc && proc->pid == pid) {
+                spinlock_release(&sched->lock);
+                return proc;
+            }
+        }
+
+        spinlock_release(&sched->lock);
+    }
+
+    return NULL;
+}

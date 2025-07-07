@@ -7,7 +7,9 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <sys/kpanic.h>
+#include <sys/sched.h>
 #include <sys/syscall.h>
+#include <util/errno.h>
 #include <util/log.h>
 
 struct idt_entry __attribute__((aligned(16))) idt_descriptor[256] = {0};
@@ -23,15 +25,12 @@ struct idt_ptr idt_ptr = {sizeof(idt_descriptor) - 1,
                           (uint64_t)&idt_descriptor};
 
 void syscall_handler(struct register_ctx* ctx) {
-    int status = 0;
-
-    if (ctx->rax < SYSCALL_TABLE_SIZE) {
-        status = syscall_table[ctx->rax]((void*)ctx->rdi, (void*)ctx->rsi,
-                                         (void*)ctx->rdx, (void*)ctx->rcx,
-                                         (void*)ctx->r8);
-    } else {
-        log("warning: Unknown syscall %lu", ctx->rax);
-        status = -1; // TODO: errno
+    long status = syscall_dispatch(ctx->rax, ctx->rdi, ctx->rsi, ctx->rdx);
+    pcb_t* proc = sched_get_current();
+    if (proc && status < 0) {
+        proc->errno = -status;
+        log("pid %d: %s(): %s", proc->pid, SYSCALL_TO_STR(ctx->rax),
+            ERRNO_TO_STR(proc->errno));
     }
 
     ctx->rax = status;

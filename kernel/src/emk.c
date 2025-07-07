@@ -131,6 +131,7 @@ char* get_key(const char* cmdline, const char* key) {
 
 /* ---------------- SCHEDULER STUFF ---------------- */
 void tick(struct register_ctx* ctx) { sched_tick(ctx); }
+
 /* ---------------------------------------------------*/
 
 void emk_entry(void) {
@@ -334,6 +335,9 @@ void emk_entry(void) {
     struct limine_file* mod = mod_request.response->modules[mod_idx];
 
     vctx_t* vctx = vinit(pmnew(), 0x10000);
+
+    __asm__ volatile("cli");
+
     sched_spawn(true, (void (*)())elf_load(true, mod->address, vctx),
                 vctx->pagemap, vctx);
 
