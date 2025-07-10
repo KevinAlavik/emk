@@ -29,6 +29,7 @@ typedef struct pcb {
     struct register_ctx ctx;
     int32_t exit_code;
     errno_t errno;
+    bool user;
 } pcb_t;
 
 void sched_init();

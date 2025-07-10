@@ -104,6 +104,8 @@ uint32_t sched_spawn(bool user, void (*entry)(void), uint64_t* pagemap,
         proc->ctx.ss = 0x10;
     }
 
+    proc->user = user;
+
     void* stack = valloc(proc->vctx, stack_size, map_flags);
     if (!stack) {
         kfree(proc);

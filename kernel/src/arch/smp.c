@@ -17,6 +17,7 @@
 #include <sys/apic/lapic.h>
 #include <sys/kpanic.h>
 #include <sys/sched.h>
+#include <sys/syscall.h>
 #include <util/align.h>
 #include <util/log.h>
 
@@ -49,6 +50,11 @@ static inline void set_cpu_local(cpu_local_t* cpu) {
     wrmsr(MSR_GS_BASE, (uint64_t)cpu);
 }
 
+void test(void) {
+    while (1)
+        syscall(SYS_kping, 0, 0, 0);
+}
+
 static void init_cpu(cpu_local_t* cpu) {
     (void)cpu;
     // TODO: CPU-specific GDT with different TSS and such.
@@ -61,6 +67,7 @@ static void init_cpu(cpu_local_t* cpu) {
     lapic_enable();
     tss_init(kstack_top);
     sched_init();
+    sched_spawn(false, test, kernel_pagemap, kvm_ctx);
 }
 
 void smp_entry(struct limine_mp_info* smp_info) {

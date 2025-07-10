@@ -6,7 +6,7 @@
 #include <stdint.h>
 
 typedef struct {
-    volatile uint32_t lock; // 0 = unlocked, 1 = locked
+    volatile uint32_t lock;
 } spinlock_t;
 
 static inline void spinlock_init(spinlock_t* lock) { lock->lock = 0; }
