@@ -17,18 +17,8 @@ static int sys_exit(uintptr_t code, __unused uintptr_t unused1,
     return 0;
 }
 
-static int sys_msg(uintptr_t s_ptr, __unused uintptr_t unused1,
-                   __unused uintptr_t unused2) {
-    if (!s_ptr)
-        return -EINVAL;
-    char* s = (char*)s_ptr;
-    log("Message from PID %d: \033[1m%s\033[0m", sched_get_current()->pid, s);
-    return 0;
-}
-
 static syscall_fn_t syscall_table[] = {
     [SYS_exit] = sys_exit,
-    [SYS_msg] = sys_msg,
 };
 
 long syscall_dispatch(uint64_t num, uint64_t arg1, uint64_t arg2,
