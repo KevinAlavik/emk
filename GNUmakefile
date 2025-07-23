@@ -2,7 +2,7 @@
 MAKEFLAGS += -rR
 .SUFFIXES:
 
-QEMUFLAGS ?= -enable-kvm -smp 4 -serial file:com1.log
+QEMUFLAGS ?= -smp 4 -serial file:com1.log
 IMAGE_NAME := release/emk
 
 HOST_CC := cc
