@@ -17,7 +17,7 @@ typedef unsigned int errno_t;
     ((errno) == EOK       ? "No error"                                         \
      : (errno) == EFAULT  ? "Bad address"                                      \
      : (errno) == EINVAL  ? "Invalid argument"                                 \
-     : (errno) == EBADPID ? "Bad pid"                                          \
+     : (errno) == EBADPID ? "Bad process id"                                   \
      : (errno) == ESRCH   ? "No such process"                                  \
      : (errno) == ENOSYS  ? "Function not implemented"                         \
      : (errno) == EAGAIN  ? "Resource temporarily unavailable"                 \
